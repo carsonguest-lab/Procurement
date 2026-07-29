@@ -4,7 +4,16 @@ import { z } from "zod";
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { requireWriter } from "@/lib/auth-helpers";
-import { computeOrderByDate } from "@/lib/procurement";
+import { computeOrderByDate, isSubmittalApproved } from "@/lib/procurement";
+
+const SUBMITTAL_STATUSES = [
+  "NOT_SUBMITTED",
+  "SUBMITTED",
+  "APPROVED",
+  "APPROVED_AS_NOTED",
+  "REVISE_AND_RESUBMIT",
+  "REJECTED",
+] as const;
 
 const materialSchema = z.object({
   projectId: z.string().min(1, "Project is required"),
@@ -13,6 +22,7 @@ const materialSchema = z.object({
   leadTimeDays: z.coerce.number().int().min(0),
   requiredOnSiteDate: z.string().min(1, "Required-on-site date is required"),
   orderByDate: z.string().optional(),
+  submittalStatus: z.enum(SUBMITTAL_STATUSES),
   notes: z.string().optional(),
 });
 
@@ -24,6 +34,7 @@ function parseForm(formData: FormData) {
     leadTimeDays: formData.get("leadTimeDays"),
     requiredOnSiteDate: formData.get("requiredOnSiteDate"),
     orderByDate: formData.get("orderByDate") || undefined,
+    submittalStatus: formData.get("submittalStatus"),
     notes: formData.get("notes") || undefined,
   });
 }
@@ -45,6 +56,7 @@ export async function createMaterialItem(formData: FormData) {
       leadTimeDays: parsed.leadTimeDays,
       requiredOnSiteDate,
       orderByDate: resolveOrderByDate(requiredOnSiteDate, parsed.leadTimeDays, parsed.orderByDate),
+      submittalStatus: parsed.submittalStatus,
       notes: parsed.notes || null,
       loggedById: user.id,
     },
@@ -71,6 +83,7 @@ export async function updateMaterialItem(itemId: string, formData: FormData) {
       leadTimeDays: parsed.leadTimeDays,
       requiredOnSiteDate,
       orderByDate: resolveOrderByDate(requiredOnSiteDate, parsed.leadTimeDays, parsed.orderByDate),
+      submittalStatus: parsed.submittalStatus,
       notes: parsed.notes || null,
     },
   });
@@ -96,6 +109,18 @@ export async function setMaterialStatus(
 ) {
   await requireWriter();
 
+  if (status === "ORDERED" || status === "DELIVERED") {
+    const current = await prisma.materialItem.findUniqueOrThrow({
+      where: { id: itemId },
+      select: { submittalStatus: true },
+    });
+    if (!isSubmittalApproved(current.submittalStatus)) {
+      throw new Error(
+        "Can't proceed with procurement until the submittal is approved for this item."
+      );
+    }
+  }
+
   const data: {
     status: typeof status;
     actualOrderDate?: Date | null;
@@ -110,6 +135,23 @@ export async function setMaterialStatus(
   }
 
   const item = await prisma.materialItem.update({ where: { id: itemId }, data });
+
+  revalidatePath("/materials");
+  revalidatePath("/dashboard");
+  revalidatePath("/calendar");
+  revalidatePath(`/projects/${item.projectId}`);
+}
+
+export async function setSubmittalStatus(
+  itemId: string,
+  submittalStatus: (typeof SUBMITTAL_STATUSES)[number]
+) {
+  await requireWriter();
+
+  const item = await prisma.materialItem.update({
+    where: { id: itemId },
+    data: { submittalStatus },
+  });
 
   revalidatePath("/materials");
   revalidatePath("/dashboard");

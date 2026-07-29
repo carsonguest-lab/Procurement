@@ -12,6 +12,14 @@ export function startOfToday(): Date {
   return d;
 }
 
+export type SubmittalStatus =
+  | "NOT_SUBMITTED"
+  | "SUBMITTED"
+  | "APPROVED"
+  | "APPROVED_AS_NOTED"
+  | "REVISE_AND_RESUBMIT"
+  | "REJECTED";
+
 type MaterialForFlags = {
   status: "NOT_ORDERED" | "ORDERED" | "DELIVERED";
   orderByDate: Date;
@@ -26,10 +34,32 @@ export function isAtRisk(item: MaterialForFlags, today = startOfToday()): boolea
   return item.status !== "DELIVERED" && item.requiredOnSiteDate < today;
 }
 
+// Statuses that clear a material to be ordered.
+const SUBMITTAL_APPROVED_STATUSES: readonly SubmittalStatus[] = ["APPROVED", "APPROVED_AS_NOTED"];
+
+export function isSubmittalApproved(submittalStatus: SubmittalStatus): boolean {
+  return SUBMITTAL_APPROVED_STATUSES.includes(submittalStatus);
+}
+
+export function isBlockedOnSubmittal(
+  item: MaterialForFlags & { submittalStatus: SubmittalStatus }
+): boolean {
+  return item.status === "NOT_ORDERED" && !isSubmittalApproved(item.submittalStatus);
+}
+
 export const STATUS_LABELS: Record<MaterialForFlags["status"], string> = {
   NOT_ORDERED: "Not Ordered",
   ORDERED: "Ordered",
   DELIVERED: "Delivered",
+};
+
+export const SUBMITTAL_STATUS_LABELS: Record<SubmittalStatus, string> = {
+  NOT_SUBMITTED: "Not Submitted",
+  SUBMITTED: "Submitted",
+  APPROVED: "Approved",
+  APPROVED_AS_NOTED: "Approved as Noted",
+  REVISE_AND_RESUBMIT: "Revise & Resubmit",
+  REJECTED: "Rejected",
 };
 
 export const PROJECT_STATUS_LABELS: Record<"ACTIVE" | "ON_HOLD" | "COMPLETE", string> = {

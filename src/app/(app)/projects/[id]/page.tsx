@@ -10,7 +10,7 @@ import { MaterialsTable } from "@/components/materials-table";
 import { ProcurementCalendar } from "@/components/procurement-calendar";
 import { ProjectFormDialog } from "../project-form-dialog";
 import { MaterialFormDialog } from "@/app/(app)/materials/material-form-dialog";
-import { formatDate, isAtRisk, isOverdueToOrder } from "@/lib/procurement";
+import { formatDate, isAtRisk, isBlockedOnSubmittal, isOverdueToOrder } from "@/lib/procurement";
 
 export default async function ProjectDetailPage({
   params,
@@ -36,6 +36,7 @@ export default async function ProjectDetailPage({
   const canWrite = user.role !== "VIEWER";
   const overdueCount = items.filter((i) => isOverdueToOrder(i)).length;
   const atRiskCount = items.filter((i) => isAtRisk(i)).length;
+  const blockedCount = items.filter((i) => isBlockedOnSubmittal(i)).length;
   const deliveredCount = items.filter((i) => i.status === "DELIVERED").length;
 
   return (
@@ -61,7 +62,7 @@ export default async function ProjectDetailPage({
         )}
       </div>
 
-      <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+      <div className="grid grid-cols-2 gap-4 sm:grid-cols-5">
         <Card>
           <CardContent className="flex flex-col gap-1 pt-4">
             <span className="text-xs text-muted-foreground">Total Materials</span>
@@ -72,6 +73,14 @@ export default async function ProjectDetailPage({
           <CardContent className="flex flex-col gap-1 pt-4">
             <span className="text-xs text-muted-foreground">Delivered</span>
             <span className="text-2xl font-semibold">{deliveredCount}</span>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="flex flex-col gap-1 pt-4">
+            <span className="text-xs text-muted-foreground">Blocked on Submittal</span>
+            <span className="text-2xl font-semibold text-red-600 dark:text-red-400">
+              {blockedCount}
+            </span>
           </CardContent>
         </Card>
         <Card>

@@ -19,11 +19,25 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
   DropdownMenuSeparator,
+  DropdownMenuSub,
+  DropdownMenuSubTrigger,
+  DropdownMenuSubContent,
 } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
-import { MaterialStatusBadge, UrgencyBadge } from "@/components/status-badge";
-import { formatDate, isAtRisk, isOverdueToOrder } from "@/lib/procurement";
-import { setMaterialStatus, deleteMaterialItem } from "@/app/(app)/materials/actions";
+import { MaterialStatusBadge, SubmittalStatusBadge, UrgencyBadge } from "@/components/status-badge";
+import {
+  formatDate,
+  isAtRisk,
+  isOverdueToOrder,
+  isSubmittalApproved,
+  SUBMITTAL_STATUS_LABELS,
+  type SubmittalStatus,
+} from "@/lib/procurement";
+import {
+  setMaterialStatus,
+  setSubmittalStatus,
+  deleteMaterialItem,
+} from "@/app/(app)/materials/actions";
 import { MaterialFormDialog } from "@/app/(app)/materials/material-form-dialog";
 
 export type MaterialRow = {
@@ -33,6 +47,7 @@ export type MaterialRow = {
   requiredOnSiteDate: Date;
   orderByDate: Date;
   status: "NOT_ORDERED" | "ORDERED" | "DELIVERED";
+  submittalStatus: SubmittalStatus;
   notes: string | null;
   project: { id: string; name: string };
   vendor: { id: string; name: string };
@@ -66,8 +81,19 @@ export function MaterialsTable({
       try {
         await setMaterialStatus(id, status);
         router.refresh();
+      } catch (e) {
+        toast.error(e instanceof Error ? e.message : "Couldn't update status.");
+      }
+    });
+  }
+
+  function handleSubmittalChange(id: string, submittalStatus: SubmittalStatus) {
+    startTransition(async () => {
+      try {
+        await setSubmittalStatus(id, submittalStatus);
+        router.refresh();
       } catch {
-        toast.error("Couldn't update status.");
+        toast.error("Couldn't update submittal status.");
       }
     });
   }
@@ -95,6 +121,7 @@ export function MaterialsTable({
             <TableHead>Lead Time</TableHead>
             <TableHead>Required at Site</TableHead>
             <TableHead>Order Date</TableHead>
+            <TableHead>Submittal</TableHead>
             <TableHead>Status</TableHead>
             <TableHead className="w-10" />
           </TableRow>
@@ -103,7 +130,7 @@ export function MaterialsTable({
           {items.length === 0 && (
             <TableRow>
               <TableCell
-                colSpan={5 + (showProjectColumn ? 1 : 0) + (showVendorColumn ? 1 : 0)}
+                colSpan={6 + (showProjectColumn ? 1 : 0) + (showVendorColumn ? 1 : 0)}
                 className="text-center text-muted-foreground py-10"
               >
                 {emptyMessage}
@@ -144,6 +171,9 @@ export function MaterialsTable({
                   </div>
                 </TableCell>
                 <TableCell>
+                  <SubmittalStatusBadge status={item.submittalStatus} />
+                </TableCell>
+                <TableCell>
                   <MaterialStatusBadge status={item.status} />
                 </TableCell>
                 <TableCell>
@@ -159,6 +189,23 @@ export function MaterialsTable({
                           Edit
                         </DropdownMenuItem>
                         <DropdownMenuSeparator />
+                        <DropdownMenuSub>
+                          <DropdownMenuSubTrigger>Set Submittal Status</DropdownMenuSubTrigger>
+                          <DropdownMenuSubContent>
+                            {Object.entries(SUBMITTAL_STATUS_LABELS).map(([value, label]) => (
+                              <DropdownMenuItem
+                                key={value}
+                                disabled={item.submittalStatus === value}
+                                onClick={() =>
+                                  handleSubmittalChange(item.id, value as SubmittalStatus)
+                                }
+                              >
+                                {label}
+                              </DropdownMenuItem>
+                            ))}
+                          </DropdownMenuSubContent>
+                        </DropdownMenuSub>
+                        <DropdownMenuSeparator />
                         <DropdownMenuItem
                           disabled={item.status === "NOT_ORDERED"}
                           onClick={() => handleStatusChange(item.id, "NOT_ORDERED")}
@@ -166,14 +213,26 @@ export function MaterialsTable({
                           Mark Not Ordered
                         </DropdownMenuItem>
                         <DropdownMenuItem
-                          disabled={item.status === "ORDERED"}
+                          disabled={item.status === "ORDERED" || !isSubmittalApproved(item.submittalStatus)}
                           onClick={() => handleStatusChange(item.id, "ORDERED")}
+                          title={
+                            !isSubmittalApproved(item.submittalStatus)
+                              ? "Submittal must be approved before ordering"
+                              : undefined
+                          }
                         >
                           Mark Ordered
                         </DropdownMenuItem>
                         <DropdownMenuItem
-                          disabled={item.status === "DELIVERED"}
+                          disabled={
+                            item.status === "DELIVERED" || !isSubmittalApproved(item.submittalStatus)
+                          }
                           onClick={() => handleStatusChange(item.id, "DELIVERED")}
+                          title={
+                            !isSubmittalApproved(item.submittalStatus)
+                              ? "Submittal must be approved before ordering"
+                              : undefined
+                          }
                         >
                           Mark Delivered
                         </DropdownMenuItem>

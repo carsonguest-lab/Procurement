@@ -134,6 +134,13 @@ async function main() {
     leadTimeDays: number;
     requiredOnSiteDate: Date;
     status: "NOT_ORDERED" | "ORDERED" | "DELIVERED";
+    submittalStatus:
+      | "NOT_SUBMITTED"
+      | "SUBMITTED"
+      | "APPROVED"
+      | "APPROVED_AS_NOTED"
+      | "REVISE_AND_RESUBMIT"
+      | "REJECTED";
     notes?: string;
   };
 
@@ -146,7 +153,8 @@ async function main() {
       leadTimeDays: 45,
       requiredOnSiteDate: daysFromNow(10),
       status: "NOT_ORDERED",
-      notes: "Confirm shop drawings approved before releasing order.",
+      submittalStatus: "REVISE_AND_RESUBMIT",
+      notes: "Engineer kicked back shop drawings — resubmit before we can order.",
     },
     {
       id: "seed-item-2",
@@ -156,6 +164,7 @@ async function main() {
       leadTimeDays: 60,
       requiredOnSiteDate: daysFromNow(90),
       status: "NOT_ORDERED",
+      submittalStatus: "SUBMITTED",
     },
     {
       id: "seed-item-3",
@@ -165,6 +174,7 @@ async function main() {
       leadTimeDays: 30,
       requiredOnSiteDate: daysFromNow(20),
       status: "ORDERED",
+      submittalStatus: "APPROVED",
     },
     {
       id: "seed-item-4",
@@ -174,7 +184,8 @@ async function main() {
       leadTimeDays: 21,
       requiredOnSiteDate: daysFromNow(5),
       status: "NOT_ORDERED",
-      notes: "At risk — expedite or confirm with sub.",
+      submittalStatus: "APPROVED",
+      notes: "At risk — submittal cleared, just needs the PO issued.",
     },
     {
       id: "seed-item-5",
@@ -184,6 +195,7 @@ async function main() {
       leadTimeDays: 35,
       requiredOnSiteDate: daysFromNow(50),
       status: "NOT_ORDERED",
+      submittalStatus: "NOT_SUBMITTED",
     },
     {
       id: "seed-item-6",
@@ -193,6 +205,7 @@ async function main() {
       leadTimeDays: 14,
       requiredOnSiteDate: daysFromNow(35),
       status: "DELIVERED",
+      submittalStatus: "APPROVED_AS_NOTED",
     },
     {
       id: "seed-item-7",
@@ -202,6 +215,7 @@ async function main() {
       leadTimeDays: 28,
       requiredOnSiteDate: daysFromNow(-3),
       status: "ORDERED",
+      submittalStatus: "APPROVED",
       notes: "Delayed at manufacturer, follow up.",
     },
   ];
@@ -210,23 +224,24 @@ async function main() {
     const requiredOnSiteDate = item.requiredOnSiteDate;
     const orderByDate = computeOrderByDate(requiredOnSiteDate, item.leadTimeDays);
 
+    const fields = {
+      projectId: item.projectId,
+      vendorId: item.vendorId,
+      material: item.material,
+      leadTimeDays: item.leadTimeDays,
+      requiredOnSiteDate,
+      orderByDate,
+      status: item.status,
+      submittalStatus: item.submittalStatus,
+      notes: item.notes,
+      actualOrderDate: item.status !== "NOT_ORDERED" ? daysFromNow(-2) : null,
+      actualDeliveryDate: item.status === "DELIVERED" ? daysFromNow(-1) : null,
+    };
+
     await prisma.materialItem.upsert({
       where: { id: item.id },
-      update: {},
-      create: {
-        id: item.id,
-        projectId: item.projectId,
-        vendorId: item.vendorId,
-        material: item.material,
-        leadTimeDays: item.leadTimeDays,
-        requiredOnSiteDate,
-        orderByDate,
-        status: item.status,
-        notes: item.notes,
-        loggedById: admin.id,
-        actualOrderDate: item.status !== "NOT_ORDERED" ? daysFromNow(-2) : null,
-        actualDeliveryDate: item.status === "DELIVERED" ? daysFromNow(-1) : null,
-      },
+      update: fields,
+      create: { id: item.id, loggedById: admin.id, ...fields },
     });
   }
 

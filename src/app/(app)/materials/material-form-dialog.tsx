@@ -24,7 +24,7 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { createMaterialItem, updateMaterialItem } from "./actions";
-import { computeOrderByDate } from "@/lib/procurement";
+import { computeOrderByDate, SUBMITTAL_STATUS_LABELS, type SubmittalStatus } from "@/lib/procurement";
 
 type Option = { id: string; name: string };
 
@@ -36,6 +36,7 @@ type MaterialData = {
   leadTimeDays: number;
   requiredOnSiteDate: Date;
   orderByDate: Date;
+  submittalStatus: SubmittalStatus;
   notes: string | null;
 };
 
@@ -210,6 +211,26 @@ export function MaterialFormDialog({
             />
             <p className="text-xs text-muted-foreground">
               Defaults to required-at-site date minus lead time minus a 1 week buffer. Editable.
+            </p>
+          </div>
+
+          <div className="flex flex-col gap-2">
+            <Label htmlFor="submittalStatus">Submittal Status</Label>
+            <Select name="submittalStatus" defaultValue={item?.submittalStatus ?? "NOT_SUBMITTED"}>
+              <SelectTrigger id="submittalStatus" className="w-full">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {Object.entries(SUBMITTAL_STATUS_LABELS).map(([value, label]) => (
+                  <SelectItem key={value} value={value}>
+                    {label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <p className="text-xs text-muted-foreground">
+              Procurement can&apos;t proceed (Ordered/Delivered) until this is Approved or
+              Approved as Noted.
             </p>
           </div>
 

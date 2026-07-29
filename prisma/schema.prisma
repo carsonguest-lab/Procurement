@@ -26,6 +26,15 @@ enum MaterialStatus {
   DELIVERED
 }
 
+enum SubmittalStatus {
+  NOT_SUBMITTED
+  SUBMITTED
+  APPROVED
+  APPROVED_AS_NOTED
+  REVISE_AND_RESUBMIT
+  REJECTED
+}
+
 model User {
   id             String         @id @default(cuid())
   name           String
@@ -76,6 +85,7 @@ model MaterialItem {
   actualDeliveryDate DateTime?
 
   status      MaterialStatus @default(NOT_ORDERED)
+  submittalStatus SubmittalStatus @default(NOT_SUBMITTED)
   notes       String?
 
   loggedBy    User?          @relation("MaterialItemLoggedBy", fields: [loggedById], references: [id], onDelete: SetNull)

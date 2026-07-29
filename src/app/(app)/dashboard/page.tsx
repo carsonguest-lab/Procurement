@@ -3,7 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { requireUser } from "@/lib/auth-helpers";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { MaterialList } from "./material-list";
-import { isAtRisk, isOverdueToOrder, startOfToday } from "@/lib/procurement";
+import { isAtRisk, isBlockedOnSubmittal, isOverdueToOrder, startOfToday } from "@/lib/procurement";
 
 export default async function DashboardPage() {
   await requireUser();
@@ -20,6 +20,7 @@ export default async function DashboardPage() {
 
   const overdueToOrder = items.filter((i) => isOverdueToOrder(i, today));
   const atRisk = items.filter((i) => isAtRisk(i, today));
+  const blockedOnSubmittal = items.filter((i) => isBlockedOnSubmittal(i));
 
   const upcomingOrders = items.filter(
     (i) =>
@@ -46,11 +47,19 @@ export default async function DashboardPage() {
         </p>
       </div>
 
-      <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+      <div className="grid grid-cols-2 gap-4 sm:grid-cols-5">
         <Card>
           <CardContent className="flex flex-col gap-1 pt-4">
             <span className="text-xs text-muted-foreground">Active Materials</span>
             <span className="text-2xl font-semibold">{items.length}</span>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="flex flex-col gap-1 pt-4">
+            <span className="text-xs text-muted-foreground">Blocked on Submittal</span>
+            <span className="text-2xl font-semibold text-red-600 dark:text-red-400">
+              {blockedOnSubmittal.length}
+            </span>
           </CardContent>
         </Card>
         <Card>
@@ -78,6 +87,19 @@ export default async function DashboardPage() {
       </div>
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">Blocked on Submittal</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <MaterialList
+              items={blockedOnSubmittal}
+              dateField="orderByDate"
+              emptyMessage="Nothing blocked on a submittal right now."
+            />
+          </CardContent>
+        </Card>
+
         <Card>
           <CardHeader>
             <CardTitle className="text-base">Overdue to Order</CardTitle>
@@ -141,6 +163,7 @@ export default async function DashboardPage() {
               const projItems = project.materialItems;
               const overdue = projItems.filter((i) => isOverdueToOrder(i, today)).length;
               const risk = projItems.filter((i) => isAtRisk(i, today)).length;
+              const blocked = projItems.filter((i) => isBlockedOnSubmittal(i)).length;
               return (
                 <li key={project.id} className="flex items-center justify-between py-2.5 text-sm">
                   <Link href={`/projects/${project.id}`} className="font-medium hover:underline">
@@ -148,6 +171,11 @@ export default async function DashboardPage() {
                   </Link>
                   <div className="flex items-center gap-4 text-xs text-muted-foreground">
                     <span>{projItems.length} active</span>
+                    {blocked > 0 && (
+                      <span className="text-red-600 dark:text-red-400">
+                        {blocked} blocked on submittal
+                      </span>
+                    )}
                     {overdue > 0 && (
                       <span className="text-red-600 dark:text-red-400">{overdue} overdue</span>
                     )}

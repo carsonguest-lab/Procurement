@@ -1,0 +1,5 @@
+-- CreateEnum
+CREATE TYPE "SubmittalStatus" AS ENUM ('NOT_SUBMITTED', 'SUBMITTED', 'APPROVED', 'APPROVED_AS_NOTED', 'REVISE_AND_RESUBMIT', 'REJECTED');
+
+-- AlterTable
+ALTER TABLE "MaterialItem" ADD COLUMN     "submittalStatus" "SubmittalStatus" NOT NULL DEFAULT 'NOT_SUBMITTED';
