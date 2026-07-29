@@ -1,0 +1,90 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  ADMIN
+  MEMBER
+  VIEWER
+}
+
+enum ProjectStatus {
+  ACTIVE
+  ON_HOLD
+  COMPLETE
+}
+
+enum MaterialStatus {
+  NOT_ORDERED
+  ORDERED
+  DELIVERED
+}
+
+model User {
+  id             String         @id @default(cuid())
+  name           String
+  email          String         @unique
+  passwordHash   String
+  role           Role           @default(MEMBER)
+  createdAt      DateTime       @default(now())
+  loggedMaterial MaterialItem[] @relation("MaterialItemLoggedBy")
+}
+
+model Project {
+  id            String         @id @default(cuid())
+  name          String
+  address       String?
+  status        ProjectStatus  @default(ACTIVE)
+  startDate     DateTime?
+  endDate       DateTime?
+  createdAt     DateTime       @default(now())
+  materialItems MaterialItem[]
+}
+
+model Vendor {
+  id            String         @id @default(cuid())
+  name          String
+  trade         String?
+  contactName   String?
+  email         String?
+  phone         String?
+  notes         String?
+  createdAt     DateTime       @default(now())
+  materialItems MaterialItem[]
+}
+
+model MaterialItem {
+  id          String         @id @default(cuid())
+  project     Project        @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  projectId   String
+  vendor      Vendor         @relation(fields: [vendorId], references: [id], onDelete: Restrict)
+  vendorId    String
+
+  material    String
+  leadTimeDays Int
+
+  requiredOnSiteDate DateTime
+  orderByDate        DateTime
+
+  actualOrderDate    DateTime?
+  actualDeliveryDate DateTime?
+
+  status      MaterialStatus @default(NOT_ORDERED)
+  notes       String?
+
+  loggedBy    User?          @relation("MaterialItemLoggedBy", fields: [loggedById], references: [id], onDelete: SetNull)
+  loggedById  String?
+
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+
+  @@index([projectId])
+  @@index([vendorId])
+  @@index([status])
+}
