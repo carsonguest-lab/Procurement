@@ -17,11 +17,22 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: "Invalid or missing token." }, { status: 401 });
   }
 
-  const result = await seedDemoData(prisma);
+  try {
+    const result = await seedDemoData(prisma);
 
-  return NextResponse.json({
-    message: "Demo data loaded.",
-    ...result,
-    loginPassword: "password123",
-  });
+    return NextResponse.json({
+      message: "Demo data loaded.",
+      ...result,
+      loginPassword: "password123",
+    });
+  } catch (e) {
+    return NextResponse.json(
+      {
+        error: "Seeding failed.",
+        detail: e instanceof Error ? e.message : String(e),
+        hasDatabaseUrl: Boolean(process.env.DATABASE_URL),
+      },
+      { status: 500 }
+    );
+  }
 }
