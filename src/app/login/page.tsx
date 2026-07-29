@@ -46,9 +46,9 @@ function LoginForm() {
         <CardHeader>
           <div className="mb-2 flex items-center gap-2">
             <div className="flex h-8 w-8 items-center justify-center rounded-md bg-primary text-primary-foreground font-semibold">
-              T
+              P
             </div>
-            <span className="text-lg font-semibold">Trestle</span>
+            <span className="text-lg font-semibold">ProProcure</span>
           </div>
           <CardTitle>Sign in</CardTitle>
           <CardDescription>

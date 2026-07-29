@@ -42,10 +42,10 @@ export function AppSidebar({ role }: { role: string }) {
       <SidebarHeader>
         <div className="flex items-center gap-2 px-2 py-1.5">
           <div className="flex h-7 w-7 items-center justify-center rounded-md bg-sidebar-primary text-sidebar-primary-foreground text-sm font-semibold">
-            T
+            P
           </div>
           <span className="text-sm font-semibold text-sidebar-foreground">
-            Trestle
+            ProProcure
           </span>
         </div>
       </SidebarHeader>

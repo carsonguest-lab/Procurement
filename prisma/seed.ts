@@ -16,33 +16,33 @@ async function main() {
   const adminPasswordHash = await bcrypt.hash("password123", 10);
 
   const admin = await prisma.user.upsert({
-    where: { email: "admin@trestle.dev" },
+    where: { email: "admin@proprocure.dev" },
     update: {},
     create: {
       name: "Alex Admin",
-      email: "admin@trestle.dev",
+      email: "admin@proprocure.dev",
       passwordHash: adminPasswordHash,
       role: "ADMIN",
     },
   });
 
   await prisma.user.upsert({
-    where: { email: "pm@trestle.dev" },
+    where: { email: "pm@proprocure.dev" },
     update: {},
     create: {
       name: "Priya Member",
-      email: "pm@trestle.dev",
+      email: "pm@proprocure.dev",
       passwordHash: adminPasswordHash,
       role: "MEMBER",
     },
   });
 
   await prisma.user.upsert({
-    where: { email: "viewer@trestle.dev" },
+    where: { email: "viewer@proprocure.dev" },
     update: {},
     create: {
       name: "Val Viewer",
-      email: "viewer@trestle.dev",
+      email: "viewer@proprocure.dev",
       passwordHash: adminPasswordHash,
       role: "VIEWER",
     },
@@ -246,9 +246,9 @@ async function main() {
   }
 
   console.log("Seed complete.");
-  console.log("  Admin login:  admin@trestle.dev / password123");
-  console.log("  Member login: pm@trestle.dev / password123");
-  console.log("  Viewer login: viewer@trestle.dev / password123");
+  console.log("  Admin login:  admin@proprocure.dev / password123");
+  console.log("  Member login: pm@proprocure.dev / password123");
+  console.log("  Viewer login: viewer@proprocure.dev / password123");
 }
 
 main()

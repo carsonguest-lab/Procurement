@@ -14,7 +14,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Trestle | Procurement Tracker",
+  title: "ProProcure | Procurement Tracker",
   description: "Construction material procurement and delivery tracking",
 };
 
