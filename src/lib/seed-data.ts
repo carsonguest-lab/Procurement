@@ -1,5 +1,5 @@
 import bcrypt from "bcryptjs";
-import type { PrismaClient } from "@/generated/prisma/client";
+import type { PrismaClient } from "@prisma/client";
 import { computeOrderByDate } from "@/lib/procurement";
 
 function daysFromNow(days: number) {
