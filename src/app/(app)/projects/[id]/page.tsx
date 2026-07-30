@@ -14,11 +14,15 @@ import { formatDate, isAtRisk, isBlockedOnSubmittal, isOverdueToOrder } from "@/
 
 export default async function ProjectDetailPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ id: string }>;
+  searchParams: Promise<{ tab?: string; highlight?: string; date?: string }>;
 }) {
   const user = await requireUser();
   const { id } = await params;
+  const { tab, highlight, date } = await searchParams;
+  const initialTab = tab === "calendar" ? "calendar" : "materials";
 
   const project = await prisma.project.findUnique({ where: { id } });
   if (!project) notFound();
@@ -101,7 +105,7 @@ export default async function ProjectDetailPage({
         </Card>
       </div>
 
-      <Tabs defaultValue="materials">
+      <Tabs defaultValue={initialTab}>
         <div className="flex items-center justify-between">
           <TabsList>
             <TabsTrigger value="materials">Material Log</TabsTrigger>
@@ -128,6 +132,7 @@ export default async function ProjectDetailPage({
             showProjectColumn={false}
             canWrite={canWrite}
             emptyMessage="No materials logged for this project yet."
+            highlightId={highlight}
           />
         </TabsContent>
         <TabsContent value="calendar" className="mt-4">
@@ -136,6 +141,7 @@ export default async function ProjectDetailPage({
             projects={projects}
             vendors={vendors}
             canWrite={canWrite}
+            initialDate={date}
           />
         </TabsContent>
       </Tabs>

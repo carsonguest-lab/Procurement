@@ -42,13 +42,21 @@ export function ProcurementCalendar({
   projects,
   vendors,
   canWrite,
+  initialDate,
 }: {
   items: MaterialRow[];
   projects: Option[];
   vendors: Option[];
   canWrite: boolean;
+  initialDate?: string;
 }) {
+  const highlightDate = initialDate ? new Date(initialDate) : null;
+  const hasValidHighlight = highlightDate && !isNaN(highlightDate.getTime());
+
   const [month, setMonth] = useState(() => {
+    if (hasValidHighlight) {
+      return new Date(highlightDate!.getFullYear(), highlightDate!.getMonth(), 1);
+    }
     const d = new Date();
     return new Date(d.getFullYear(), d.getMonth(), 1);
   });
@@ -127,13 +135,15 @@ export function ProcurementCalendar({
             const inMonth = day.getMonth() === month.getMonth();
             const dayEvents = eventsByDay.get(day.toDateString()) ?? [];
             const isToday = isSameDay(day, today);
+            const isHighlighted = hasValidHighlight && isSameDay(day, highlightDate!);
             return (
               <div
                 key={idx}
                 className={cn(
                   "min-h-[100px] border-b border-r p-1.5 last:border-r-0",
                   idx % 7 === 6 && "border-r-0",
-                  !inMonth && "bg-muted/20"
+                  !inMonth && "bg-muted/20",
+                  isHighlighted && "ring-2 ring-inset ring-primary"
                 )}
               >
                 <span

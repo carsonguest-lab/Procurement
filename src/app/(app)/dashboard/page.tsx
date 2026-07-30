@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { requireUser } from "@/lib/auth-helpers";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { MaterialList } from "./material-list";
+import { DashboardSearch } from "./dashboard-search";
 import { isAtRisk, isBlockedOnSubmittal, isOverdueToOrder, startOfToday } from "@/lib/procurement";
 
 export default async function DashboardPage() {
@@ -40,11 +41,14 @@ export default async function DashboardPage() {
 
   return (
     <div className="flex flex-col gap-6">
-      <div>
-        <h2 className="text-2xl font-semibold tracking-tight">Dashboard</h2>
-        <p className="text-sm text-muted-foreground">
-          What needs attention across your procurement log.
-        </p>
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <h2 className="text-2xl font-semibold tracking-tight">Dashboard</h2>
+          <p className="text-sm text-muted-foreground">
+            What needs attention across your procurement log.
+          </p>
+        </div>
+        <DashboardSearch />
       </div>
 
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-5">

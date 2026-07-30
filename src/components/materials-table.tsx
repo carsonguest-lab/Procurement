@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useState, useSyncExternalStore, useTransition } from "react";
+import { useEffect, useRef, useState, useSyncExternalStore, useTransition } from "react";
 import Link from "next/link";
 import { toast } from "sonner";
 import { GripVertical, MoreHorizontal } from "lucide-react";
@@ -142,6 +142,7 @@ export function MaterialsTable({
   showVendorColumn = true,
   canWrite,
   emptyMessage = "No material items yet.",
+  highlightId,
 }: {
   items: MaterialRow[];
   projects: Option[];
@@ -150,6 +151,7 @@ export function MaterialsTable({
   showVendorColumn?: boolean;
   canWrite: boolean;
   emptyMessage?: string;
+  highlightId?: string;
 }) {
   const router = useRouter();
   const [, startTransition] = useTransition();
@@ -161,6 +163,11 @@ export function MaterialsTable({
   );
   const [draggedColumn, setDraggedColumn] = useState<ColumnId | null>(null);
   const [dragOverColumn, setDragOverColumn] = useState<ColumnId | null>(null);
+  const highlightRef = useRef<HTMLTableRowElement>(null);
+
+  useEffect(() => {
+    highlightRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+  }, [highlightId]);
 
   function reorderColumns(dragged: ColumnId, target: ColumnId) {
     if (dragged === target) return;
@@ -354,7 +361,11 @@ export function MaterialsTable({
             </TableRow>
           )}
           {items.map((item) => (
-            <TableRow key={item.id}>
+            <TableRow
+              key={item.id}
+              ref={item.id === highlightId ? highlightRef : undefined}
+              className={cn(item.id === highlightId && "bg-accent/60")}
+            >
               {visibleColumns.map((id) => (
                 <TableCell key={id} className={cn(CENTERED_COLUMNS.has(id) && "text-center")}>
                   {renderCell(id, item)}
