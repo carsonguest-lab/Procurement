@@ -1,10 +1,11 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useState, useTransition } from "react";
+import { useState, useSyncExternalStore, useTransition } from "react";
 import Link from "next/link";
 import { toast } from "sonner";
-import { MoreHorizontal } from "lucide-react";
+import { GripVertical, MoreHorizontal } from "lucide-react";
+import { cn } from "@/lib/utils";
 import {
   Table,
   TableBody,
@@ -19,9 +20,6 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
   DropdownMenuSeparator,
-  DropdownMenuSub,
-  DropdownMenuSubTrigger,
-  DropdownMenuSubContent,
 } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
 import { MaterialStatusBadge, SubmittalStatusBadge, UrgencyBadge } from "@/components/status-badge";
@@ -30,6 +28,7 @@ import {
   isAtRisk,
   isOverdueToOrder,
   isSubmittalApproved,
+  STATUS_LABELS,
   SUBMITTAL_STATUS_LABELS,
   type SubmittalStatus,
 } from "@/lib/procurement";
@@ -55,6 +54,86 @@ export type MaterialRow = {
 
 type Option = { id: string; name: string };
 
+type ColumnId =
+  | "material"
+  | "project"
+  | "vendor"
+  | "leadTime"
+  | "requiredOnSite"
+  | "orderDate"
+  | "submittal"
+  | "status";
+
+const DEFAULT_COLUMN_ORDER: ColumnId[] = [
+  "material",
+  "project",
+  "vendor",
+  "leadTime",
+  "requiredOnSite",
+  "orderDate",
+  "submittal",
+  "status",
+];
+
+const COLUMN_LABELS: Record<ColumnId, string> = {
+  material: "Material",
+  project: "Project",
+  vendor: "Responsible Sub",
+  leadTime: "Lead Time",
+  requiredOnSite: "Required at Site",
+  orderDate: "Order Date",
+  submittal: "Submittal",
+  status: "Status",
+};
+
+// Badge-bearing columns read best centered under their header; text columns stay left-aligned.
+const CENTERED_COLUMNS = new Set<ColumnId>(["requiredOnSite", "orderDate", "submittal", "status"]);
+
+const COLUMN_ORDER_STORAGE_KEY = "proprocure:materials-table-column-order";
+
+// Shared across every MaterialsTable instance (project pages, vendor pages, the global
+// materials list) so column order is one consistent preference, not per-page state.
+// Modeled as a tiny external store (rather than useState+useEffect) so reading
+// localStorage never causes a setState-during-effect render.
+let columnOrderCache: ColumnId[] | null = null;
+const columnOrderListeners = new Set<() => void>();
+
+function parseStoredColumnOrder(raw: string): ColumnId[] | null {
+  try {
+    const parsed: unknown = JSON.parse(raw);
+    if (!Array.isArray(parsed)) return null;
+    const valid = parsed.filter((id): id is ColumnId => DEFAULT_COLUMN_ORDER.includes(id));
+    // Merge in any columns missing from the stored (older) order so new columns still show up.
+    const missing = DEFAULT_COLUMN_ORDER.filter((id) => !valid.includes(id));
+    return [...valid, ...missing];
+  } catch {
+    return null;
+  }
+}
+
+function getColumnOrderSnapshot(): ColumnId[] {
+  if (columnOrderCache === null) {
+    const raw = window.localStorage.getItem(COLUMN_ORDER_STORAGE_KEY);
+    columnOrderCache = (raw && parseStoredColumnOrder(raw)) || DEFAULT_COLUMN_ORDER;
+  }
+  return columnOrderCache;
+}
+
+function getServerColumnOrderSnapshot(): ColumnId[] {
+  return DEFAULT_COLUMN_ORDER;
+}
+
+function subscribeColumnOrder(listener: () => void) {
+  columnOrderListeners.add(listener);
+  return () => columnOrderListeners.delete(listener);
+}
+
+function setColumnOrder(next: ColumnId[]) {
+  columnOrderCache = next;
+  window.localStorage.setItem(COLUMN_ORDER_STORAGE_KEY, JSON.stringify(next));
+  columnOrderListeners.forEach((listener) => listener());
+}
+
 export function MaterialsTable({
   items,
   projects,
@@ -75,6 +154,20 @@ export function MaterialsTable({
   const router = useRouter();
   const [, startTransition] = useTransition();
   const [editingId, setEditingId] = useState<string | null>(null);
+  const columnOrder = useSyncExternalStore(
+    subscribeColumnOrder,
+    getColumnOrderSnapshot,
+    getServerColumnOrderSnapshot
+  );
+  const [draggedColumn, setDraggedColumn] = useState<ColumnId | null>(null);
+  const [dragOverColumn, setDragOverColumn] = useState<ColumnId | null>(null);
+
+  function reorderColumns(dragged: ColumnId, target: ColumnId) {
+    if (dragged === target) return;
+    const next = columnOrder.filter((id) => id !== dragged);
+    next.splice(next.indexOf(target), 0, dragged);
+    setColumnOrder(next);
+  }
 
   function handleStatusChange(id: string, status: "NOT_ORDERED" | "ORDERED" | "DELIVERED") {
     startTransition(async () => {
@@ -110,19 +203,142 @@ export function MaterialsTable({
     });
   }
 
+  const visibleColumns = columnOrder.filter((id) => {
+    if (id === "project") return showProjectColumn;
+    if (id === "vendor") return showVendorColumn;
+    return true;
+  });
+
+  function renderCell(id: ColumnId, item: MaterialRow) {
+    switch (id) {
+      case "material":
+        return <span className="font-medium">{item.material}</span>;
+      case "project":
+        return (
+          <Link href={`/projects/${item.project.id}`} className="text-muted-foreground hover:underline">
+            {item.project.name}
+          </Link>
+        );
+      case "vendor":
+        return (
+          <Link href={`/vendors/${item.vendor.id}`} className="text-muted-foreground hover:underline">
+            {item.vendor.name}
+          </Link>
+        );
+      case "leadTime":
+        return <>{item.leadTimeDays}d</>;
+      case "requiredOnSite":
+        return (
+          <div className="flex flex-col items-center">
+            <span>{formatDate(item.requiredOnSiteDate)}</span>
+            {isAtRisk(item) && <UrgencyBadge label="At Risk" />}
+          </div>
+        );
+      case "orderDate":
+        return (
+          <div className="flex flex-col items-center">
+            <span>{formatDate(item.orderByDate)}</span>
+            {isOverdueToOrder(item) && <UrgencyBadge label="Overdue to Order" />}
+          </div>
+        );
+      case "submittal":
+        return canWrite ? (
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <button type="button" className="cursor-pointer">
+                <SubmittalStatusBadge status={item.submittalStatus} />
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="center">
+              {Object.entries(SUBMITTAL_STATUS_LABELS).map(([value, label]) => (
+                <DropdownMenuItem
+                  key={value}
+                  disabled={item.submittalStatus === value}
+                  onClick={() => handleSubmittalChange(item.id, value as SubmittalStatus)}
+                >
+                  {label}
+                </DropdownMenuItem>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
+        ) : (
+          <SubmittalStatusBadge status={item.submittalStatus} />
+        );
+      case "status":
+        return canWrite ? (
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <button type="button" className="cursor-pointer">
+                <MaterialStatusBadge status={item.status} />
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="center">
+              {(Object.entries(STATUS_LABELS) as [typeof item.status, string][]).map(
+                ([value, label]) => {
+                  const blockedBySubmittal =
+                    value !== "NOT_ORDERED" && !isSubmittalApproved(item.submittalStatus);
+                  return (
+                    <DropdownMenuItem
+                      key={value}
+                      disabled={item.status === value || blockedBySubmittal}
+                      onClick={() => handleStatusChange(item.id, value)}
+                      title={blockedBySubmittal ? "Submittal must be approved before ordering" : undefined}
+                    >
+                      {label}
+                    </DropdownMenuItem>
+                  );
+                }
+              )}
+            </DropdownMenuContent>
+          </DropdownMenu>
+        ) : (
+          <MaterialStatusBadge status={item.status} />
+        );
+    }
+  }
+
   return (
     <div className="rounded-lg border bg-card shadow-sm">
       <Table>
         <TableHeader>
           <TableRow>
-            <TableHead>Material</TableHead>
-            {showProjectColumn && <TableHead>Project</TableHead>}
-            {showVendorColumn && <TableHead>Responsible Sub</TableHead>}
-            <TableHead>Lead Time</TableHead>
-            <TableHead>Required at Site</TableHead>
-            <TableHead>Order Date</TableHead>
-            <TableHead>Submittal</TableHead>
-            <TableHead>Status</TableHead>
+            {visibleColumns.map((id) => (
+              <TableHead
+                key={id}
+                draggable
+                onDragStart={(e) => {
+                  e.dataTransfer.setData("text/plain", id);
+                  e.dataTransfer.effectAllowed = "move";
+                  setDraggedColumn(id);
+                }}
+                onDragEnd={() => {
+                  setDraggedColumn(null);
+                  setDragOverColumn(null);
+                }}
+                onDragOver={(e) => {
+                  e.preventDefault();
+                  if (dragOverColumn !== id) setDragOverColumn(id);
+                }}
+                onDrop={(e) => {
+                  e.preventDefault();
+                  const dragged = e.dataTransfer.getData("text/plain") as ColumnId;
+                  if (dragged) reorderColumns(dragged, id);
+                  setDraggedColumn(null);
+                  setDragOverColumn(null);
+                }}
+                className={cn(
+                  "cursor-grab select-none active:cursor-grabbing",
+                  CENTERED_COLUMNS.has(id) && "text-center",
+                  draggedColumn === id && "opacity-40",
+                  dragOverColumn === id && draggedColumn !== id && "bg-accent"
+                )}
+              >
+                <span className="inline-flex items-center gap-1">
+                  <GripVertical className="h-3 w-3 text-muted-foreground/50" />
+                  {COLUMN_LABELS[id]}
+                </span>
+              </TableHead>
+            ))}
             <TableHead className="w-10" />
           </TableRow>
         </TableHeader>
@@ -130,135 +346,52 @@ export function MaterialsTable({
           {items.length === 0 && (
             <TableRow>
               <TableCell
-                colSpan={6 + (showProjectColumn ? 1 : 0) + (showVendorColumn ? 1 : 0)}
+                colSpan={visibleColumns.length + 1}
                 className="text-center text-muted-foreground py-10"
               >
                 {emptyMessage}
               </TableCell>
             </TableRow>
           )}
-          {items.map((item) => {
-            const overdue = isOverdueToOrder(item);
-            const atRisk = isAtRisk(item);
-            return (
-              <TableRow key={item.id}>
-                <TableCell className="font-medium">{item.material}</TableCell>
-                {showProjectColumn && (
-                  <TableCell className="text-muted-foreground">
-                    <Link href={`/projects/${item.project.id}`} className="hover:underline">
-                      {item.project.name}
-                    </Link>
-                  </TableCell>
+          {items.map((item) => (
+            <TableRow key={item.id}>
+              {visibleColumns.map((id) => (
+                <TableCell key={id} className={cn(CENTERED_COLUMNS.has(id) && "text-center")}>
+                  {renderCell(id, item)}
+                </TableCell>
+              ))}
+              <TableCell>
+                {canWrite && (
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="ghost" size="icon" className="h-8 w-8">
+                        <MoreHorizontal className="h-4 w-4" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      <DropdownMenuItem onClick={() => setEditingId(item.id)}>Edit</DropdownMenuItem>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem
+                        className="text-destructive focus:text-destructive"
+                        onClick={() => handleDelete(item.id)}
+                      >
+                        Delete
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
                 )}
-                {showVendorColumn && (
-                  <TableCell className="text-muted-foreground">
-                    <Link href={`/vendors/${item.vendor.id}`} className="hover:underline">
-                      {item.vendor.name}
-                    </Link>
-                  </TableCell>
+                {canWrite && (
+                  <MaterialFormDialog
+                    projects={projects}
+                    vendors={vendors}
+                    item={item}
+                    open={editingId === item.id}
+                    onOpenChange={(o) => setEditingId(o ? item.id : null)}
+                  />
                 )}
-                <TableCell>{item.leadTimeDays}d</TableCell>
-                <TableCell>
-                  <div className="flex flex-col">
-                    <span>{formatDate(item.requiredOnSiteDate)}</span>
-                    {atRisk && <UrgencyBadge label="At Risk" />}
-                  </div>
-                </TableCell>
-                <TableCell>
-                  <div className="flex flex-col">
-                    <span>{formatDate(item.orderByDate)}</span>
-                    {overdue && <UrgencyBadge label="Overdue to Order" />}
-                  </div>
-                </TableCell>
-                <TableCell>
-                  <SubmittalStatusBadge status={item.submittalStatus} />
-                </TableCell>
-                <TableCell>
-                  <MaterialStatusBadge status={item.status} />
-                </TableCell>
-                <TableCell>
-                  {canWrite && (
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="icon" className="h-8 w-8">
-                          <MoreHorizontal className="h-4 w-4" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuItem onClick={() => setEditingId(item.id)}>
-                          Edit
-                        </DropdownMenuItem>
-                        <DropdownMenuSeparator />
-                        <DropdownMenuSub>
-                          <DropdownMenuSubTrigger>Set Submittal Status</DropdownMenuSubTrigger>
-                          <DropdownMenuSubContent>
-                            {Object.entries(SUBMITTAL_STATUS_LABELS).map(([value, label]) => (
-                              <DropdownMenuItem
-                                key={value}
-                                disabled={item.submittalStatus === value}
-                                onClick={() =>
-                                  handleSubmittalChange(item.id, value as SubmittalStatus)
-                                }
-                              >
-                                {label}
-                              </DropdownMenuItem>
-                            ))}
-                          </DropdownMenuSubContent>
-                        </DropdownMenuSub>
-                        <DropdownMenuSeparator />
-                        <DropdownMenuItem
-                          disabled={item.status === "NOT_ORDERED"}
-                          onClick={() => handleStatusChange(item.id, "NOT_ORDERED")}
-                        >
-                          Mark Not Ordered
-                        </DropdownMenuItem>
-                        <DropdownMenuItem
-                          disabled={item.status === "ORDERED" || !isSubmittalApproved(item.submittalStatus)}
-                          onClick={() => handleStatusChange(item.id, "ORDERED")}
-                          title={
-                            !isSubmittalApproved(item.submittalStatus)
-                              ? "Submittal must be approved before ordering"
-                              : undefined
-                          }
-                        >
-                          Mark Ordered
-                        </DropdownMenuItem>
-                        <DropdownMenuItem
-                          disabled={
-                            item.status === "DELIVERED" || !isSubmittalApproved(item.submittalStatus)
-                          }
-                          onClick={() => handleStatusChange(item.id, "DELIVERED")}
-                          title={
-                            !isSubmittalApproved(item.submittalStatus)
-                              ? "Submittal must be approved before ordering"
-                              : undefined
-                          }
-                        >
-                          Mark Delivered
-                        </DropdownMenuItem>
-                        <DropdownMenuSeparator />
-                        <DropdownMenuItem
-                          className="text-destructive focus:text-destructive"
-                          onClick={() => handleDelete(item.id)}
-                        >
-                          Delete
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  )}
-                  {canWrite && (
-                    <MaterialFormDialog
-                      projects={projects}
-                      vendors={vendors}
-                      item={item}
-                      open={editingId === item.id}
-                      onOpenChange={(o) => setEditingId(o ? item.id : null)}
-                    />
-                  )}
-                </TableCell>
-              </TableRow>
-            );
-          })}
+              </TableCell>
+            </TableRow>
+          ))}
         </TableBody>
       </Table>
     </div>
