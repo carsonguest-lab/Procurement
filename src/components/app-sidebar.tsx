@@ -44,7 +44,7 @@ export function AppSidebar({ role }: { role: string }) {
           <div className="flex h-7 w-7 items-center justify-center rounded-md bg-sidebar-primary text-sidebar-primary-foreground text-sm font-semibold">
             P
           </div>
-          <span className="text-sm font-semibold text-sidebar-foreground">
+          <span className="font-heading text-sm font-semibold tracking-tight text-sidebar-foreground">
             ProProcure
           </span>
         </div>

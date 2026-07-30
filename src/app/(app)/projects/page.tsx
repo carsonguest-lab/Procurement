@@ -43,7 +43,7 @@ export default async function ProjectsPage() {
         )}
       </div>
 
-      <div className="rounded-lg border bg-card">
+      <div className="rounded-lg border bg-card shadow-sm">
         <Table>
           <TableHeader>
             <TableRow>

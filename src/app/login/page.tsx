@@ -48,7 +48,7 @@ function LoginForm() {
             <div className="flex h-8 w-8 items-center justify-center rounded-md bg-primary text-primary-foreground font-semibold">
               P
             </div>
-            <span className="text-lg font-semibold">ProProcure</span>
+            <span className="font-heading text-lg font-semibold tracking-tight">ProProcure</span>
           </div>
           <CardTitle>Sign in</CardTitle>
           <CardDescription>
