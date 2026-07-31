@@ -68,6 +68,22 @@ export const PROJECT_STATUS_LABELS: Record<"ACTIVE" | "ON_HOLD" | "COMPLETE", st
   COMPLETE: "Complete",
 };
 
+export type ScheduleImportStatus = "PROCESSING" | "READY_FOR_REVIEW" | "FAILED";
+
+export const SCHEDULE_IMPORT_STATUS_LABELS: Record<ScheduleImportStatus, string> = {
+  PROCESSING: "Processing",
+  READY_FOR_REVIEW: "Ready for Review",
+  FAILED: "Failed",
+};
+
+export type ExtractedTagStatus = "PENDING" | "APPROVED" | "REJECTED";
+
+export const EXTRACTED_TAG_STATUS_LABELS: Record<ExtractedTagStatus, string> = {
+  PENDING: "Pending",
+  APPROVED: "Approved",
+  REJECTED: "Rejected",
+};
+
 export function formatDate(date: Date | string | null | undefined): string {
   if (!date) return "—";
   const d = typeof date === "string" ? new Date(date) : date;

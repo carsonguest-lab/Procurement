@@ -1,16 +1,20 @@
 import { notFound } from "next/navigation";
+import Link from "next/link";
 import { Plus } from "lucide-react";
 import { prisma } from "@/lib/prisma";
 import { requireUser } from "@/lib/auth-helpers";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ProjectStatusBadge } from "@/components/status-badge";
+import { ProjectStatusBadge, ScheduleImportStatusBadge } from "@/components/status-badge";
 import { MaterialsTable } from "@/components/materials-table";
 import { ProcurementCalendar } from "@/components/procurement-calendar";
+import { ScheduleUpload } from "@/components/schedule-upload";
 import { ProjectFormDialog } from "../project-form-dialog";
 import { MaterialFormDialog } from "@/app/(app)/materials/material-form-dialog";
 import { formatDate, isAtRisk, isBlockedOnSubmittal, isOverdueToOrder } from "@/lib/procurement";
+
+export const maxDuration = 60;
 
 export default async function ProjectDetailPage({
   params,
@@ -22,12 +26,12 @@ export default async function ProjectDetailPage({
   const user = await requireUser();
   const { id } = await params;
   const { tab, highlight, date } = await searchParams;
-  const initialTab = tab === "calendar" ? "calendar" : "materials";
+  const initialTab = tab === "calendar" ? "calendar" : tab === "imports" ? "imports" : "materials";
 
   const project = await prisma.project.findUnique({ where: { id } });
   if (!project) notFound();
 
-  const [items, projects, vendors] = await Promise.all([
+  const [items, projects, vendors, scheduleImports] = await Promise.all([
     prisma.materialItem.findMany({
       where: { projectId: id },
       include: { project: true, vendor: true },
@@ -35,6 +39,11 @@ export default async function ProjectDetailPage({
     }),
     prisma.project.findMany({ orderBy: { name: "asc" }, select: { id: true, name: true } }),
     prisma.vendor.findMany({ orderBy: { name: "asc" }, select: { id: true, name: true } }),
+    prisma.scheduleImport.findMany({
+      where: { projectId: id },
+      include: { tags: true },
+      orderBy: { createdAt: "desc" },
+    }),
   ]);
 
   const canWrite = user.role !== "VIEWER";
@@ -110,6 +119,7 @@ export default async function ProjectDetailPage({
           <TabsList>
             <TabsTrigger value="materials">Material Log</TabsTrigger>
             <TabsTrigger value="calendar">Calendar</TabsTrigger>
+            <TabsTrigger value="imports">Schedule Import</TabsTrigger>
           </TabsList>
           {canWrite && (
             <MaterialFormDialog
@@ -143,6 +153,47 @@ export default async function ProjectDetailPage({
             canWrite={canWrite}
             initialDate={date}
           />
+        </TabsContent>
+        <TabsContent value="imports" className="mt-4 flex flex-col gap-4">
+          {canWrite && <ScheduleUpload projectId={project.id} />}
+          {scheduleImports.length === 0 ? (
+            <p className="py-6 text-center text-sm text-muted-foreground">
+              No schedules uploaded yet.
+            </p>
+          ) : (
+            <div className="flex flex-col gap-2">
+              {scheduleImports.map((imp) => {
+                const pendingCount = imp.tags.filter((t) => t.status === "PENDING").length;
+                const approvedCount = imp.tags.filter((t) => t.status === "APPROVED").length;
+                const rejectedCount = imp.tags.filter((t) => t.status === "REJECTED").length;
+                return (
+                  <Card key={imp.id}>
+                    <CardContent className="flex items-center justify-between gap-4 py-3">
+                      <div className="flex flex-col gap-0.5">
+                        <span className="text-sm font-medium">{imp.fileName}</span>
+                        <span className="text-xs text-muted-foreground">
+                          Uploaded {formatDate(imp.createdAt)}
+                          {imp.tags.length > 0 &&
+                            ` · ${pendingCount} pending, ${approvedCount} approved, ${rejectedCount} rejected`}
+                        </span>
+                        {imp.status === "FAILED" && imp.error && (
+                          <span className="text-xs text-red-600 dark:text-red-400">{imp.error}</span>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <ScheduleImportStatusBadge status={imp.status} />
+                        {imp.status === "READY_FOR_REVIEW" && (
+                          <Button size="sm" variant="outline" asChild>
+                            <Link href={`/projects/${project.id}/imports/${imp.id}`}>Review</Link>
+                          </Button>
+                        )}
+                      </div>
+                    </CardContent>
+                  </Card>
+                );
+              })}
+            </div>
+          )}
         </TabsContent>
       </Tabs>
     </div>

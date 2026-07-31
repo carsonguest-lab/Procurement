@@ -15,6 +15,8 @@ import { ProjectFormDialog } from "./project-form-dialog";
 import { ProjectStatusBadge } from "@/components/status-badge";
 import { formatDate } from "@/lib/procurement";
 
+export const maxDuration = 60;
+
 export default async function ProjectsPage() {
   const user = await requireUser();
 

@@ -35,25 +35,39 @@ enum SubmittalStatus {
   REJECTED
 }
 
+enum ScheduleImportStatus {
+  PROCESSING
+  READY_FOR_REVIEW
+  FAILED
+}
+
+enum ExtractedTagStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
 model User {
-  id             String         @id @default(cuid())
-  name           String
-  email          String         @unique
-  passwordHash   String
-  role           Role           @default(MEMBER)
-  createdAt      DateTime       @default(now())
-  loggedMaterial MaterialItem[] @relation("MaterialItemLoggedBy")
+  id                      String           @id @default(cuid())
+  name                    String
+  email                   String           @unique
+  passwordHash            String
+  role                    Role             @default(MEMBER)
+  createdAt               DateTime         @default(now())
+  loggedMaterial          MaterialItem[]   @relation("MaterialItemLoggedBy")
+  scheduleImportsUploaded ScheduleImport[] @relation("ScheduleImportUploadedBy")
 }
 
 model Project {
-  id            String         @id @default(cuid())
-  name          String
-  address       String?
-  status        ProjectStatus  @default(ACTIVE)
-  startDate     DateTime?
-  endDate       DateTime?
-  createdAt     DateTime       @default(now())
-  materialItems MaterialItem[]
+  id              String           @id @default(cuid())
+  name            String
+  address         String?
+  status          ProjectStatus    @default(ACTIVE)
+  startDate       DateTime?
+  endDate         DateTime?
+  createdAt       DateTime         @default(now())
+  materialItems   MaterialItem[]
+  scheduleImports ScheduleImport[]
 }
 
 model Vendor {
@@ -69,13 +83,13 @@ model Vendor {
 }
 
 model MaterialItem {
-  id          String         @id @default(cuid())
-  project     Project        @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  projectId   String
-  vendor      Vendor         @relation(fields: [vendorId], references: [id], onDelete: Restrict)
-  vendorId    String
+  id        String  @id @default(cuid())
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  projectId String
+  vendor    Vendor  @relation(fields: [vendorId], references: [id], onDelete: Restrict)
+  vendorId  String
 
-  material    String
+  material     String
   leadTimeDays Int
 
   requiredOnSiteDate DateTime
@@ -84,17 +98,51 @@ model MaterialItem {
   actualOrderDate    DateTime?
   actualDeliveryDate DateTime?
 
-  status      MaterialStatus @default(NOT_ORDERED)
+  status          MaterialStatus  @default(NOT_ORDERED)
   submittalStatus SubmittalStatus @default(NOT_SUBMITTED)
-  notes       String?
+  notes           String?
 
-  loggedBy    User?          @relation("MaterialItemLoggedBy", fields: [loggedById], references: [id], onDelete: SetNull)
-  loggedById  String?
+  loggedBy   User?   @relation("MaterialItemLoggedBy", fields: [loggedById], references: [id], onDelete: SetNull)
+  loggedById String?
 
-  createdAt   DateTime       @default(now())
-  updatedAt   DateTime       @updatedAt
+  extractedTag ExtractedTag?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@index([projectId])
   @@index([vendorId])
+  @@index([status])
+}
+
+model ScheduleImport {
+  id           String               @id @default(cuid())
+  project      Project              @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  projectId    String
+  fileName     String
+  fileUrl      String
+  status       ScheduleImportStatus @default(PROCESSING)
+  error        String?
+  uploadedBy   User?                @relation("ScheduleImportUploadedBy", fields: [uploadedById], references: [id], onDelete: SetNull)
+  uploadedById String?
+  createdAt    DateTime             @default(now())
+  tags         ExtractedTag[]
+
+  @@index([projectId])
+}
+
+model ExtractedTag {
+  id             String             @id @default(cuid())
+  import         ScheduleImport     @relation(fields: [importId], references: [id], onDelete: Cascade)
+  importId       String
+  tag            String
+  description    String?
+  pageNumber     Int?
+  status         ExtractedTagStatus @default(PENDING)
+  materialItem   MaterialItem?      @relation(fields: [materialItemId], references: [id], onDelete: SetNull)
+  materialItemId String?            @unique
+  createdAt      DateTime           @default(now())
+
+  @@index([importId])
   @@index([status])
 }
