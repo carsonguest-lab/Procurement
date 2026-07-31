@@ -20,6 +20,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json(jsonResponse);
   } catch (e) {
+    console.error("schedule-upload token generation failed:", e);
     return NextResponse.json(
       { error: e instanceof Error ? e.message : "Upload failed." },
       { status: 400 }
