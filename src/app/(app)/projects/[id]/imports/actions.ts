@@ -2,6 +2,7 @@
 
 import { z } from "zod";
 import { revalidatePath } from "next/cache";
+import { get } from "@vercel/blob";
 import { prisma } from "@/lib/prisma";
 import { requireWriter } from "@/lib/auth-helpers";
 import { computeOrderByDate } from "@/lib/procurement";
@@ -34,11 +35,11 @@ export async function createScheduleImport({
   });
 
   try {
-    const response = await fetch(fileUrl);
-    if (!response.ok) {
-      throw new Error(`Could not download the uploaded file (${response.status}).`);
+    const downloaded = await get(fileUrl, { access: "private" });
+    if (!downloaded) {
+      throw new Error("Could not find the uploaded file.");
     }
-    const pdfBytes = Buffer.from(await response.arrayBuffer());
+    const pdfBytes = Buffer.from(await new Response(downloaded.stream).arrayBuffer());
 
     const tags = await extractEquipmentTags(pdfBytes);
     if (tags.length === 0) {

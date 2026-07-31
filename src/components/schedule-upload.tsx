@@ -30,11 +30,14 @@ export function ScheduleUpload({
     setPhase("uploading");
     setProgress(0);
 
+    const uploadTimeout = AbortSignal.timeout(45_000);
+
     try {
       const blob = await upload(file.name, file, {
-        access: "public",
+        access: "private",
         handleUploadUrl: "/api/schedule-upload",
         onUploadProgress: (p) => setProgress(p.percentage),
+        abortSignal: uploadTimeout,
       });
 
       setPhase("extracting");
@@ -54,7 +57,11 @@ export function ScheduleUpload({
         router.push(`/projects/${projectId}/imports/${importId}`);
       }
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Upload failed.");
+      if (e instanceof Error && e.name === "TimeoutError") {
+        toast.error("Upload timed out after 45s. Please try again.");
+      } else {
+        toast.error(e instanceof Error ? e.message : "Upload failed.");
+      }
       setPhase("idle");
     }
   }
