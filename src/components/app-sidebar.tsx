@@ -38,13 +38,13 @@ export function AppSidebar({ role }: { role: string }) {
       : NAV_ITEMS;
 
   return (
-    <Sidebar>
+    <Sidebar collapsible="icon">
       <SidebarHeader>
-        <div className="flex items-center gap-2 px-2 py-1.5">
-          <div className="flex h-7 w-7 items-center justify-center rounded-md bg-sidebar-primary text-sidebar-primary-foreground text-sm font-semibold">
+        <div className="flex items-center gap-2 px-2 py-1.5 group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:px-0">
+          <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-sidebar-primary text-sidebar-primary-foreground text-sm font-semibold transition-transform duration-200 ease-out hover:scale-110">
             P
           </div>
-          <span className="font-heading text-sm font-semibold tracking-tight text-sidebar-foreground">
+          <span className="font-heading text-sm font-semibold tracking-tight text-sidebar-foreground group-data-[collapsible=icon]:hidden">
             ProProcure
           </span>
         </div>
@@ -58,9 +58,9 @@ export function AppSidebar({ role }: { role: string }) {
                   pathname === item.href || pathname.startsWith(item.href + "/");
                 return (
                   <SidebarMenuItem key={item.href}>
-                    <SidebarMenuButton asChild isActive={active}>
+                    <SidebarMenuButton asChild isActive={active} tooltip={item.label}>
                       <Link href={item.href}>
-                        <item.icon />
+                        <item.icon className="transition-transform duration-200 ease-out group-hover/menu-button:scale-125" />
                         <span>{item.label}</span>
                       </Link>
                     </SidebarMenuButton>

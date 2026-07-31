@@ -16,7 +16,7 @@ export default async function AppLayout({
 
   return (
     <Providers>
-      <SidebarProvider>
+      <SidebarProvider defaultOpen={false}>
         <AppSidebar role={user.role} />
         <SidebarInset>
           <TopBar name={user.name} role={user.role} />
