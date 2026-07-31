@@ -24,9 +24,20 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { createMaterialItem, updateMaterialItem } from "./actions";
-import { computeOrderByDate, SUBMITTAL_STATUS_LABELS, type SubmittalStatus } from "@/lib/procurement";
+import {
+  computeOrderByDate,
+  CSI_DIVISIONS,
+  SUBMITTAL_STATUS_LABELS,
+  type SubmittalStatus,
+} from "@/lib/procurement";
 
 type Option = { id: string; name: string };
+
+export type DivisionCategoryEntry = {
+  csiDivisionCode: string | null;
+  category: string | null;
+  subcategory: string | null;
+};
 
 type MaterialData = {
   id: string;
@@ -38,17 +49,23 @@ type MaterialData = {
   orderByDate: Date;
   submittalStatus: SubmittalStatus;
   notes: string | null;
+  csiDivisionCode: string | null;
+  category: string | null;
+  subcategory: string | null;
 };
 
 function toInputDate(d: Date | string) {
   return new Date(d).toISOString().slice(0, 10);
 }
 
+const NO_DIVISION = "NONE";
+
 export function MaterialFormDialog({
   projects,
   vendors,
   item,
   defaultProjectId,
+  divisionCategoryMap = [],
   trigger,
   open: controlledOpen,
   onOpenChange: setControlledOpen,
@@ -57,6 +74,7 @@ export function MaterialFormDialog({
   vendors: Option[];
   item?: MaterialData;
   defaultProjectId?: string;
+  divisionCategoryMap?: DivisionCategoryEntry[];
   trigger?: React.ReactNode;
   open?: boolean;
   onOpenChange?: (open: boolean) => void;
@@ -75,6 +93,9 @@ export function MaterialFormDialog({
   const [manualOrderByDate, setManualOrderByDate] = useState<string | null>(
     item ? toInputDate(item.orderByDate) : null
   );
+  // Controlled (unlike the other Selects here) because category/subcategory suggestions
+  // below need to react to the current division before the form is submitted.
+  const [csiDivisionCode, setCsiDivisionCode] = useState(item?.csiDivisionCode ?? "");
 
   const suggestedOrderByDate = useMemo(() => {
     if (!requiredOnSiteDate) return "";
@@ -85,10 +106,29 @@ export function MaterialFormDialog({
   const orderByDate = manualOrderByDate ?? suggestedOrderByDate;
   const orderByTouched = manualOrderByDate !== null;
 
+  const categoryOptions = useMemo(() => {
+    if (!csiDivisionCode) return [];
+    const set = new Set<string>();
+    for (const row of divisionCategoryMap) {
+      if (row.csiDivisionCode === csiDivisionCode && row.category) set.add(row.category);
+    }
+    return [...set].sort((a, b) => a.localeCompare(b));
+  }, [divisionCategoryMap, csiDivisionCode]);
+
+  const subcategoryOptions = useMemo(() => {
+    if (!csiDivisionCode) return [];
+    const set = new Set<string>();
+    for (const row of divisionCategoryMap) {
+      if (row.csiDivisionCode === csiDivisionCode && row.subcategory) set.add(row.subcategory);
+    }
+    return [...set].sort((a, b) => a.localeCompare(b));
+  }, [divisionCategoryMap, csiDivisionCode]);
+
   function resetOpenState(next: boolean) {
     setOpen(next);
     if (next) {
       setManualOrderByDate(item ? toInputDate(item.orderByDate) : null);
+      setCsiDivisionCode(item?.csiDivisionCode ?? "");
     }
   }
 
@@ -159,6 +199,60 @@ export function MaterialFormDialog({
                   ))}
                 </SelectContent>
               </Select>
+            </div>
+          </div>
+
+          <div className="flex flex-col gap-2">
+            <Label htmlFor="csiDivisionCode">CSI Division</Label>
+            <Select
+              name="csiDivisionCode"
+              value={csiDivisionCode || NO_DIVISION}
+              onValueChange={(v) => setCsiDivisionCode(v === NO_DIVISION ? "" : v)}
+            >
+              <SelectTrigger id="csiDivisionCode" className="w-full">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value={NO_DIVISION}>None</SelectItem>
+                {CSI_DIVISIONS.map((d) => (
+                  <SelectItem key={d.code} value={d.code}>
+                    {d.code} – {d.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div className="flex flex-col gap-2">
+              <Label htmlFor="category">Category</Label>
+              <Input
+                id="category"
+                name="category"
+                list="category-suggestions"
+                placeholder="e.g. Air Distribution"
+                defaultValue={item?.category ?? ""}
+              />
+              <datalist id="category-suggestions">
+                {categoryOptions.map((c) => (
+                  <option key={c} value={c} />
+                ))}
+              </datalist>
+            </div>
+            <div className="flex flex-col gap-2">
+              <Label htmlFor="subcategory">Subcategory</Label>
+              <Input
+                id="subcategory"
+                name="subcategory"
+                list="subcategory-suggestions"
+                placeholder="e.g. Rooftop Units"
+                defaultValue={item?.subcategory ?? ""}
+              />
+              <datalist id="subcategory-suggestions">
+                {subcategoryOptions.map((s) => (
+                  <option key={s} value={s} />
+                ))}
+              </datalist>
             </div>
           </div>
 

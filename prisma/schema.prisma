@@ -102,6 +102,10 @@ model MaterialItem {
   submittalStatus SubmittalStatus @default(NOT_SUBMITTED)
   notes           String?
 
+  csiDivisionCode String?
+  category        String?
+  subcategory     String?
+
   loggedBy   User?   @relation("MaterialItemLoggedBy", fields: [loggedById], references: [id], onDelete: SetNull)
   loggedById String?
 
@@ -113,6 +117,7 @@ model MaterialItem {
   @@index([projectId])
   @@index([vendorId])
   @@index([status])
+  @@index([csiDivisionCode])
 }
 
 model ScheduleImport {

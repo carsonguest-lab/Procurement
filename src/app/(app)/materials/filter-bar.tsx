@@ -8,7 +8,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { STATUS_LABELS } from "@/lib/procurement";
+import { CSI_DIVISIONS, STATUS_LABELS } from "@/lib/procurement";
 
 type Option = { id: string; name: string };
 
@@ -81,6 +81,23 @@ export function MaterialsFilterBar({
           {Object.entries(STATUS_LABELS).map(([value, label]) => (
             <SelectItem key={value} value={value}>
               {label}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+
+      <Select
+        defaultValue={searchParams.get("division") ?? "ALL"}
+        onValueChange={(v) => setParam("division", v)}
+      >
+        <SelectTrigger className="w-[200px]">
+          <SelectValue placeholder="Division" />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="ALL">All Divisions</SelectItem>
+          {CSI_DIVISIONS.map((d) => (
+            <SelectItem key={d.code} value={d.code}>
+              {d.code} – {d.name}
             </SelectItem>
           ))}
         </SelectContent>

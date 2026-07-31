@@ -17,7 +17,7 @@ export default async function VendorDetailPage({
   const vendor = await prisma.vendor.findUnique({ where: { id } });
   if (!vendor) notFound();
 
-  const [items, projects, vendors] = await Promise.all([
+  const [items, projects, vendors, divisionCategoryMap] = await Promise.all([
     prisma.materialItem.findMany({
       where: { vendorId: id },
       include: { project: true, vendor: true },
@@ -25,6 +25,11 @@ export default async function VendorDetailPage({
     }),
     prisma.project.findMany({ orderBy: { name: "asc" }, select: { id: true, name: true } }),
     prisma.vendor.findMany({ orderBy: { name: "asc" }, select: { id: true, name: true } }),
+    prisma.materialItem.findMany({
+      where: { csiDivisionCode: { not: null } },
+      distinct: ["csiDivisionCode", "category", "subcategory"],
+      select: { csiDivisionCode: true, category: true, subcategory: true },
+    }),
   ]);
 
   const canWrite = user.role !== "VIEWER";
@@ -68,6 +73,7 @@ export default async function VendorDetailPage({
           showVendorColumn={false}
           canWrite={canWrite}
           emptyMessage="No material items assigned to this vendor yet."
+          divisionCategoryMap={divisionCategoryMap}
         />
       </div>
     </div>

@@ -23,10 +23,14 @@ const materialSchema = z.object({
   requiredOnSiteDate: z.string().min(1, "Required-on-site date is required"),
   orderByDate: z.string().optional(),
   submittalStatus: z.enum(SUBMITTAL_STATUSES),
+  csiDivisionCode: z.string().optional(),
+  category: z.string().optional(),
+  subcategory: z.string().optional(),
   notes: z.string().optional(),
 });
 
 function parseForm(formData: FormData) {
+  const csiDivisionCode = formData.get("csiDivisionCode");
   return materialSchema.parse({
     projectId: formData.get("projectId"),
     vendorId: formData.get("vendorId"),
@@ -35,6 +39,9 @@ function parseForm(formData: FormData) {
     requiredOnSiteDate: formData.get("requiredOnSiteDate"),
     orderByDate: formData.get("orderByDate") || undefined,
     submittalStatus: formData.get("submittalStatus"),
+    csiDivisionCode: csiDivisionCode && csiDivisionCode !== "NONE" ? csiDivisionCode : undefined,
+    category: formData.get("category") || undefined,
+    subcategory: formData.get("subcategory") || undefined,
     notes: formData.get("notes") || undefined,
   });
 }
@@ -57,6 +64,9 @@ export async function createMaterialItem(formData: FormData) {
       requiredOnSiteDate,
       orderByDate: resolveOrderByDate(requiredOnSiteDate, parsed.leadTimeDays, parsed.orderByDate),
       submittalStatus: parsed.submittalStatus,
+      csiDivisionCode: parsed.csiDivisionCode || null,
+      category: parsed.category || null,
+      subcategory: parsed.subcategory || null,
       notes: parsed.notes || null,
       loggedById: user.id,
     },
@@ -84,6 +94,9 @@ export async function updateMaterialItem(itemId: string, formData: FormData) {
       requiredOnSiteDate,
       orderByDate: resolveOrderByDate(requiredOnSiteDate, parsed.leadTimeDays, parsed.orderByDate),
       submittalStatus: parsed.submittalStatus,
+      csiDivisionCode: parsed.csiDivisionCode || null,
+      category: parsed.category || null,
+      subcategory: parsed.subcategory || null,
       notes: parsed.notes || null,
     },
   });

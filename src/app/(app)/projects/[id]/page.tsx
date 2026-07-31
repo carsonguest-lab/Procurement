@@ -31,7 +31,7 @@ export default async function ProjectDetailPage({
   const project = await prisma.project.findUnique({ where: { id } });
   if (!project) notFound();
 
-  const [items, projects, vendors, scheduleImports] = await Promise.all([
+  const [items, projects, vendors, scheduleImports, divisionCategoryMap] = await Promise.all([
     prisma.materialItem.findMany({
       where: { projectId: id },
       include: { project: true, vendor: true },
@@ -43,6 +43,11 @@ export default async function ProjectDetailPage({
       where: { projectId: id },
       include: { tags: true },
       orderBy: { createdAt: "desc" },
+    }),
+    prisma.materialItem.findMany({
+      where: { csiDivisionCode: { not: null } },
+      distinct: ["csiDivisionCode", "category", "subcategory"],
+      select: { csiDivisionCode: true, category: true, subcategory: true },
     }),
   ]);
 
@@ -126,6 +131,7 @@ export default async function ProjectDetailPage({
               projects={projects}
               vendors={vendors}
               defaultProjectId={project.id}
+              divisionCategoryMap={divisionCategoryMap}
               trigger={
                 <Button size="sm">
                   <Plus className="mr-1 h-4 w-4" /> Add Material
@@ -143,6 +149,7 @@ export default async function ProjectDetailPage({
             canWrite={canWrite}
             emptyMessage="No materials logged for this project yet."
             highlightId={highlight}
+            divisionCategoryMap={divisionCategoryMap}
           />
         </TabsContent>
         <TabsContent value="calendar" className="mt-4">

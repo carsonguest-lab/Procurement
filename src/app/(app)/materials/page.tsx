@@ -9,14 +9,19 @@ import { MaterialsTable } from "@/components/materials-table";
 export default async function MaterialsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ project?: string; vendor?: string; status?: string }>;
+  searchParams: Promise<{ project?: string; vendor?: string; status?: string; division?: string }>;
 }) {
   const user = await requireUser();
   const params = await searchParams;
 
-  const [projects, vendors] = await Promise.all([
+  const [projects, vendors, divisionCategoryMap] = await Promise.all([
     prisma.project.findMany({ orderBy: { name: "asc" }, select: { id: true, name: true } }),
     prisma.vendor.findMany({ orderBy: { name: "asc" }, select: { id: true, name: true } }),
+    prisma.materialItem.findMany({
+      where: { csiDivisionCode: { not: null } },
+      distinct: ["csiDivisionCode", "category", "subcategory"],
+      select: { csiDivisionCode: true, category: true, subcategory: true },
+    }),
   ]);
 
   const items = await prisma.materialItem.findMany({
@@ -24,6 +29,7 @@ export default async function MaterialsPage({
       projectId: params.project || undefined,
       vendorId: params.vendor || undefined,
       status: (params.status as "NOT_ORDERED" | "ORDERED" | "DELIVERED") || undefined,
+      csiDivisionCode: params.division || undefined,
     },
     include: { project: true, vendor: true },
     orderBy: { requiredOnSiteDate: "asc" },
@@ -42,6 +48,7 @@ export default async function MaterialsPage({
           <MaterialFormDialog
             projects={projects}
             vendors={vendors}
+            divisionCategoryMap={divisionCategoryMap}
             trigger={
               <Button>
                 <Plus className="mr-1 h-4 w-4" /> Add Material
@@ -59,6 +66,7 @@ export default async function MaterialsPage({
         vendors={vendors}
         canWrite={user.role !== "VIEWER"}
         emptyMessage="No material items match these filters."
+        divisionCategoryMap={divisionCategoryMap}
       />
     </div>
   );
