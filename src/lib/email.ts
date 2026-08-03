@@ -2,7 +2,10 @@ import { Resend } from "resend";
 import { ROLE_LABELS } from "@/lib/procurement";
 import type { Role } from "@prisma/client";
 
-const FROM = "ProProcure <onboarding@resend.dev>";
+// Falls back to Resend's shared sandbox sender until a verified domain is
+// configured via EMAIL_FROM — see the Email Deliverability section in the
+// project docs for why that matters for landing in the inbox vs. spam.
+const FROM = process.env.EMAIL_FROM || "ProProcure <onboarding@resend.dev>";
 
 function getResend() {
   const apiKey = process.env.RESEND_API_KEY;
@@ -46,6 +49,7 @@ export async function sendInviteEmail({
       "Accept Invite",
       inviteUrl
     ),
+    text: `You've been invited to join ProProcure as a ${ROLE_LABELS[role]}.\n\nAccept your invite: ${inviteUrl}\n\nThis invite expires in 7 days.`,
   });
 }
 
@@ -67,5 +71,6 @@ export async function sendPasswordResetEmail({
       "Reset Password",
       resetUrl
     ),
+    text: `We received a request to reset your ProProcure password.\n\nReset it here: ${resetUrl}\n\nThis link expires in 1 hour. If you didn't request this, you can safely ignore this email.`,
   });
 }
