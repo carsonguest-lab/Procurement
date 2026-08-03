@@ -58,7 +58,7 @@ export async function searchAll(rawQuery: string): Promise<SearchResult[]> {
         kind: "material",
         id: m.id,
         title: m.material,
-        subtitle: `${m.project.name} · ${m.vendor.name}`,
+        subtitle: `${m.project.name} · ${m.vendor?.name ?? "No subcontractor"}`,
         projectId: m.projectId,
       })
     ),
@@ -73,7 +73,7 @@ export async function searchAll(rawQuery: string): Promise<SearchResult[]> {
     const dateMatches: SearchResult[] = [];
 
     for (const item of allItems) {
-      if (matchesParsedDate(item.requiredOnSiteDate, parsedDate)) {
+      if (item.requiredOnSiteDate && matchesParsedDate(item.requiredOnSiteDate, parsedDate)) {
         dateMatches.push({
           kind: "date",
           id: `${item.id}-required`,
@@ -83,7 +83,7 @@ export async function searchAll(rawQuery: string): Promise<SearchResult[]> {
           dateISO: item.requiredOnSiteDate.toISOString(),
         });
       }
-      if (matchesParsedDate(item.orderByDate, parsedDate)) {
+      if (item.orderByDate && matchesParsedDate(item.orderByDate, parsedDate)) {
         dateMatches.push({
           kind: "date",
           id: `${item.id}-orderby`,

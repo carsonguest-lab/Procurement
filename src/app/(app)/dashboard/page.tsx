@@ -28,12 +28,13 @@ export default async function DashboardPage() {
   const upcomingOrders = items.filter(
     (i) =>
       i.status === "NOT_ORDERED" &&
+      i.orderByDate !== null &&
       i.orderByDate >= today &&
       i.orderByDate <= in14Days
   );
 
   const upcomingDeliveries = items.filter(
-    (i) => i.requiredOnSiteDate >= today && i.requiredOnSiteDate <= in14Days
+    (i) => i.requiredOnSiteDate !== null && i.requiredOnSiteDate >= today && i.requiredOnSiteDate <= in14Days
   );
 
   const projects = await prisma.project.findMany({

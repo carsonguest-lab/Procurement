@@ -67,15 +67,19 @@ export function ProcurementCalendar({
   const eventsByDay = useMemo(() => {
     const map = new Map<string, CalendarEvent[]>();
     for (const item of items) {
-      const orderDate = new Date(item.orderByDate);
-      const requiredDate = new Date(item.requiredOnSiteDate);
-      const orderKey = orderDate.toDateString();
-      const requiredKey = requiredDate.toDateString();
-      map.set(orderKey, [...(map.get(orderKey) ?? []), { item, type: "order", date: orderDate }]);
-      map.set(requiredKey, [
-        ...(map.get(requiredKey) ?? []),
-        { item, type: "required", date: requiredDate },
-      ]);
+      if (item.orderByDate) {
+        const orderDate = new Date(item.orderByDate);
+        const orderKey = orderDate.toDateString();
+        map.set(orderKey, [...(map.get(orderKey) ?? []), { item, type: "order", date: orderDate }]);
+      }
+      if (item.requiredOnSiteDate) {
+        const requiredDate = new Date(item.requiredOnSiteDate);
+        const requiredKey = requiredDate.toDateString();
+        map.set(requiredKey, [
+          ...(map.get(requiredKey) ?? []),
+          { item, type: "required", date: requiredDate },
+        ]);
+      }
     }
     return map;
   }, [items]);

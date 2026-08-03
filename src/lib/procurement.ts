@@ -27,16 +27,20 @@ export type SubmittalStatus =
 
 type MaterialForFlags = {
   status: "NOT_ORDERED" | "ORDERED" | "DELIVERED";
-  orderByDate: Date;
-  requiredOnSiteDate: Date;
+  orderByDate: Date | null;
+  requiredOnSiteDate: Date | null;
 };
 
 export function isOverdueToOrder(item: MaterialForFlags, today = startOfToday()): boolean {
-  return item.status === "NOT_ORDERED" && item.orderByDate < today;
+  return item.status === "NOT_ORDERED" && item.orderByDate !== null && item.orderByDate < today;
 }
 
 export function isAtRisk(item: MaterialForFlags, today = startOfToday()): boolean {
-  return item.status !== "DELIVERED" && item.requiredOnSiteDate < today;
+  return (
+    item.status !== "DELIVERED" &&
+    item.requiredOnSiteDate !== null &&
+    item.requiredOnSiteDate < today
+  );
 }
 
 // Statuses that clear a material to be ordered.

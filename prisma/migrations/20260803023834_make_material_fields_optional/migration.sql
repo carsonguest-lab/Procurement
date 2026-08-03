@@ -1,0 +1,5 @@
+-- AlterTable
+ALTER TABLE "MaterialItem" ALTER COLUMN "vendorId" DROP NOT NULL,
+ALTER COLUMN "leadTimeDays" DROP NOT NULL,
+ALTER COLUMN "requiredOnSiteDate" DROP NOT NULL,
+ALTER COLUMN "orderByDate" DROP NOT NULL;

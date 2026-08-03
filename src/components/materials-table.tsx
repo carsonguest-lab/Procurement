@@ -53,9 +53,9 @@ import { MaterialFormDialog, type DivisionCategoryEntry } from "@/app/(app)/mate
 export type MaterialRow = {
   id: string;
   material: string;
-  leadTimeDays: number;
-  requiredOnSiteDate: Date;
-  orderByDate: Date;
+  leadTimeDays: number | null;
+  requiredOnSiteDate: Date | null;
+  orderByDate: Date | null;
   status: "NOT_ORDERED" | "ORDERED" | "DELIVERED";
   submittalStatus: SubmittalStatus;
   notes: string | null;
@@ -63,7 +63,7 @@ export type MaterialRow = {
   category: string | null;
   subcategory: string | null;
   project: { id: string; name: string };
-  vendor: { id: string; name: string };
+  vendor: { id: string; name: string } | null;
 };
 
 type Option = { id: string; name: string };
@@ -497,13 +497,19 @@ export function MaterialsTable({
           </Link>
         );
       case "vendor":
-        return (
+        return item.vendor ? (
           <Link href={`/vendors/${item.vendor.id}`} className="text-muted-foreground hover:underline">
             {item.vendor.name}
           </Link>
+        ) : (
+          <span className="text-muted-foreground">—</span>
         );
       case "leadTime":
-        return <>{item.leadTimeDays}d</>;
+        return item.leadTimeDays !== null ? (
+          <>{item.leadTimeDays}d</>
+        ) : (
+          <span className="text-muted-foreground">—</span>
+        );
       case "requiredOnSite":
         return (
           <div className="flex flex-col items-center">

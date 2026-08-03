@@ -134,14 +134,14 @@ model MaterialItem {
   id        String  @id @default(cuid())
   project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
   projectId String
-  vendor    Vendor  @relation(fields: [vendorId], references: [id], onDelete: Restrict)
-  vendorId  String
+  vendor    Vendor? @relation(fields: [vendorId], references: [id], onDelete: Restrict)
+  vendorId  String?
 
   material     String
-  leadTimeDays Int
+  leadTimeDays Int?
 
-  requiredOnSiteDate DateTime
-  orderByDate        DateTime
+  requiredOnSiteDate DateTime?
+  orderByDate        DateTime?
 
   actualOrderDate    DateTime?
   actualDeliveryDate DateTime?

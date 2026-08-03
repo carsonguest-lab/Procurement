@@ -42,11 +42,11 @@ export type DivisionCategoryEntry = {
 type MaterialData = {
   id: string;
   project: { id: string };
-  vendor: { id: string };
+  vendor: { id: string } | null;
   material: string;
-  leadTimeDays: number;
-  requiredOnSiteDate: Date;
-  orderByDate: Date;
+  leadTimeDays: number | null;
+  requiredOnSiteDate: Date | null;
+  orderByDate: Date | null;
   submittalStatus: SubmittalStatus;
   notes: string | null;
   csiDivisionCode: string | null;
@@ -54,11 +54,13 @@ type MaterialData = {
   subcategory: string | null;
 };
 
-function toInputDate(d: Date | string) {
+function toInputDate(d: Date | string | null) {
+  if (!d) return "";
   return new Date(d).toISOString().slice(0, 10);
 }
 
 const NO_DIVISION = "NONE";
+const NO_VENDOR = "NONE";
 
 export function MaterialFormDialog({
   projects,
@@ -89,7 +91,9 @@ export function MaterialFormDialog({
   const [requiredOnSiteDate, setRequiredOnSiteDate] = useState(
     item ? toInputDate(item.requiredOnSiteDate) : ""
   );
-  const [leadTimeDays, setLeadTimeDays] = useState(item ? String(item.leadTimeDays) : "14");
+  const [leadTimeDays, setLeadTimeDays] = useState(
+    item ? (item.leadTimeDays !== null ? String(item.leadTimeDays) : "") : ""
+  );
   const [manualOrderByDate, setManualOrderByDate] = useState<string | null>(
     item ? toInputDate(item.orderByDate) : null
   );
@@ -98,8 +102,9 @@ export function MaterialFormDialog({
   const [csiDivisionCode, setCsiDivisionCode] = useState(item?.csiDivisionCode ?? "");
 
   const suggestedOrderByDate = useMemo(() => {
-    if (!requiredOnSiteDate) return "";
-    const days = parseInt(leadTimeDays || "0", 10);
+    if (!requiredOnSiteDate || !leadTimeDays) return "";
+    const days = parseInt(leadTimeDays, 10);
+    if (Number.isNaN(days)) return "";
     return computeOrderByDate(new Date(requiredOnSiteDate), days).toISOString().slice(0, 10);
   }, [requiredOnSiteDate, leadTimeDays]);
 
@@ -186,12 +191,13 @@ export function MaterialFormDialog({
               </Select>
             </div>
             <div className="flex flex-col gap-2">
-              <Label htmlFor="vendorId" required>Responsible Subcontractor</Label>
-              <Select name="vendorId" defaultValue={item?.vendor.id}>
+              <Label htmlFor="vendorId">Responsible Subcontractor</Label>
+              <Select name="vendorId" defaultValue={item?.vendor?.id ?? NO_VENDOR}>
                 <SelectTrigger id="vendorId" className="w-full">
                   <SelectValue placeholder="Select subcontractor" />
                 </SelectTrigger>
                 <SelectContent>
+                  <SelectItem value={NO_VENDOR}>None</SelectItem>
                   {vendors.map((v) => (
                     <SelectItem key={v.id} value={v.id}>
                       {v.name}
@@ -258,24 +264,22 @@ export function MaterialFormDialog({
 
           <div className="grid grid-cols-2 gap-4">
             <div className="flex flex-col gap-2">
-              <Label htmlFor="leadTimeDays" required>Lead Time (days)</Label>
+              <Label htmlFor="leadTimeDays">Lead Time (days)</Label>
               <Input
                 id="leadTimeDays"
                 name="leadTimeDays"
                 type="number"
                 min={0}
-                required
                 value={leadTimeDays}
                 onChange={(e) => setLeadTimeDays(e.target.value)}
               />
             </div>
             <div className="flex flex-col gap-2">
-              <Label htmlFor="requiredOnSiteDate" required>Required at Site</Label>
+              <Label htmlFor="requiredOnSiteDate">Required at Site</Label>
               <Input
                 id="requiredOnSiteDate"
                 name="requiredOnSiteDate"
                 type="date"
-                required
                 value={requiredOnSiteDate}
                 onChange={(e) => setRequiredOnSiteDate(e.target.value)}
               />
@@ -284,7 +288,7 @@ export function MaterialFormDialog({
 
           <div className="flex flex-col gap-2">
             <div className="flex items-center justify-between">
-              <Label htmlFor="orderByDate" required>Order Date</Label>
+              <Label htmlFor="orderByDate">Order Date</Label>
               {orderByTouched && (
                 <button
                   type="button"
@@ -299,12 +303,12 @@ export function MaterialFormDialog({
               id="orderByDate"
               name="orderByDate"
               type="date"
-              required
               value={orderByDate}
               onChange={(e) => setManualOrderByDate(e.target.value)}
             />
             <p className="text-xs text-muted-foreground">
-              Defaults to required-at-site date minus lead time minus a 1 week buffer. Editable.
+              Defaults to required-at-site date minus lead time minus a 1 week buffer, once both
+              are set. Editable.
             </p>
           </div>
 

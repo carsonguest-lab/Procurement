@@ -4,10 +4,10 @@ import { formatDate } from "@/lib/procurement";
 type Item = {
   id: string;
   material: string;
-  orderByDate: Date;
-  requiredOnSiteDate: Date;
+  orderByDate: Date | null;
+  requiredOnSiteDate: Date | null;
   project: { id: string; name: string };
-  vendor: { id: string; name: string };
+  vendor: { id: string; name: string } | null;
 };
 
 export function MaterialList({
@@ -34,9 +34,13 @@ export function MaterialList({
                 {item.project.name}
               </Link>
               {" · "}
-              <Link href={`/vendors/${item.vendor.id}`} className="hover:underline">
-                {item.vendor.name}
-              </Link>
+              {item.vendor ? (
+                <Link href={`/vendors/${item.vendor.id}`} className="hover:underline">
+                  {item.vendor.name}
+                </Link>
+              ) : (
+                "—"
+              )}
             </span>
           </div>
           <span className="whitespace-nowrap text-xs text-muted-foreground">
