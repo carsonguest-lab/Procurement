@@ -66,7 +66,7 @@ export function VendorFormDialog({
         </DialogHeader>
         <form action={handleSubmit} className="flex flex-col gap-4">
           <div className="flex flex-col gap-2">
-            <Label htmlFor="name">Vendor / Subcontractor Name</Label>
+            <Label htmlFor="name" required>Vendor / Subcontractor Name</Label>
             <Input id="name" name="name" required defaultValue={vendor?.name} />
           </div>
           <div className="flex flex-col gap-2">

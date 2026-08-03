@@ -30,7 +30,7 @@ export function ProfileForm({ name, email }: { name: string; email: string }) {
   return (
     <form action={handleSubmit} className="flex flex-col gap-4">
       <div className="flex flex-col gap-2">
-        <Label htmlFor="name">Name</Label>
+        <Label htmlFor="name" required>Name</Label>
         <Input id="name" name="name" required defaultValue={name} />
       </div>
       <div className="flex flex-col gap-2">

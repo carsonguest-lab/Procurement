@@ -30,7 +30,7 @@ export function ResetPasswordForm({ token }: { token: string }) {
     <form action={handleSubmit} className="flex flex-col gap-4">
       <input type="hidden" name="token" value={token} />
       <div className="flex flex-col gap-2">
-        <Label htmlFor="password">New Password</Label>
+        <Label htmlFor="password" required>New Password</Label>
         <Input id="password" name="password" type="password" minLength={8} required autoFocus />
       </div>
       {error && <p className="text-sm text-destructive">{error}</p>}

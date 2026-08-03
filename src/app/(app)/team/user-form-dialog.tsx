@@ -56,11 +56,11 @@ export function UserFormDialog({ trigger }: { trigger: React.ReactNode }) {
         </DialogHeader>
         <form action={handleSubmit} className="flex flex-col gap-4">
           <div className="flex flex-col gap-2">
-            <Label htmlFor="email">Email</Label>
+            <Label htmlFor="email" required>Email</Label>
             <Input id="email" name="email" type="email" required />
           </div>
           <div className="flex flex-col gap-2">
-            <Label htmlFor="role">Role</Label>
+            <Label htmlFor="role" required>Role</Label>
             <Select name="role" defaultValue="MEMBER">
               <SelectTrigger id="role" className="w-full">
                 <SelectValue />

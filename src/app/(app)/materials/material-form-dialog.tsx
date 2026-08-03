@@ -159,7 +159,7 @@ export function MaterialFormDialog({
         </DialogHeader>
         <form action={handleSubmit} className="flex flex-col gap-4">
           <div className="flex flex-col gap-2">
-            <Label htmlFor="material">Material</Label>
+            <Label htmlFor="material" required>Material</Label>
             <Input
               id="material"
               name="material"
@@ -171,7 +171,7 @@ export function MaterialFormDialog({
 
           <div className="grid grid-cols-2 gap-4">
             <div className="flex flex-col gap-2">
-              <Label htmlFor="projectId">Project</Label>
+              <Label htmlFor="projectId" required>Project</Label>
               <Select name="projectId" defaultValue={item?.project.id ?? defaultProjectId}>
                 <SelectTrigger id="projectId" className="w-full">
                   <SelectValue placeholder="Select project" />
@@ -186,7 +186,7 @@ export function MaterialFormDialog({
               </Select>
             </div>
             <div className="flex flex-col gap-2">
-              <Label htmlFor="vendorId">Responsible Subcontractor</Label>
+              <Label htmlFor="vendorId" required>Responsible Subcontractor</Label>
               <Select name="vendorId" defaultValue={item?.vendor.id}>
                 <SelectTrigger id="vendorId" className="w-full">
                   <SelectValue placeholder="Select subcontractor" />
@@ -258,7 +258,7 @@ export function MaterialFormDialog({
 
           <div className="grid grid-cols-2 gap-4">
             <div className="flex flex-col gap-2">
-              <Label htmlFor="leadTimeDays">Lead Time (days)</Label>
+              <Label htmlFor="leadTimeDays" required>Lead Time (days)</Label>
               <Input
                 id="leadTimeDays"
                 name="leadTimeDays"
@@ -270,7 +270,7 @@ export function MaterialFormDialog({
               />
             </div>
             <div className="flex flex-col gap-2">
-              <Label htmlFor="requiredOnSiteDate">Required at Site</Label>
+              <Label htmlFor="requiredOnSiteDate" required>Required at Site</Label>
               <Input
                 id="requiredOnSiteDate"
                 name="requiredOnSiteDate"
@@ -284,7 +284,7 @@ export function MaterialFormDialog({
 
           <div className="flex flex-col gap-2">
             <div className="flex items-center justify-between">
-              <Label htmlFor="orderByDate">Order Date</Label>
+              <Label htmlFor="orderByDate" required>Order Date</Label>
               {orderByTouched && (
                 <button
                   type="button"
@@ -309,7 +309,7 @@ export function MaterialFormDialog({
           </div>
 
           <div className="flex flex-col gap-2">
-            <Label htmlFor="submittalStatus">Submittal Status</Label>
+            <Label htmlFor="submittalStatus" required>Submittal Status</Label>
             <Select name="submittalStatus" defaultValue={item?.submittalStatus ?? "NOT_SUBMITTED"}>
               <SelectTrigger id="submittalStatus" className="w-full">
                 <SelectValue />

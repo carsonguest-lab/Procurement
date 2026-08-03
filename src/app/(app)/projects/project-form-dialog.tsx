@@ -99,7 +99,7 @@ export function ProjectFormDialog({
             </DialogHeader>
             <form action={handleSubmit} className="flex flex-col gap-4">
               <div className="flex flex-col gap-2">
-                <Label htmlFor="name">Project Name</Label>
+                <Label htmlFor="name" required>Project Name</Label>
                 <Input id="name" name="name" required defaultValue={project?.name} />
               </div>
               <div className="flex flex-col gap-2">
@@ -107,7 +107,7 @@ export function ProjectFormDialog({
                 <Input id="address" name="address" defaultValue={project?.address ?? ""} />
               </div>
               <div className="flex flex-col gap-2">
-                <Label htmlFor="status">Status</Label>
+                <Label htmlFor="status" required>Status</Label>
                 <Select name="status" defaultValue={project?.status ?? "ACTIVE"}>
                   <SelectTrigger id="status" className="w-full">
                     <SelectValue />

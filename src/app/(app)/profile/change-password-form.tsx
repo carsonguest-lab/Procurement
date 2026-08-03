@@ -28,11 +28,11 @@ export function ChangePasswordForm() {
   return (
     <form key={formKey} action={handleSubmit} className="flex flex-col gap-4">
       <div className="flex flex-col gap-2">
-        <Label htmlFor="currentPassword">Current Password</Label>
+        <Label htmlFor="currentPassword" required>Current Password</Label>
         <Input id="currentPassword" name="currentPassword" type="password" required />
       </div>
       <div className="flex flex-col gap-2">
-        <Label htmlFor="newPassword">New Password</Label>
+        <Label htmlFor="newPassword" required>New Password</Label>
         <Input id="newPassword" name="newPassword" type="password" minLength={8} required />
       </div>
       {error && <p className="text-sm text-destructive">{error}</p>}
