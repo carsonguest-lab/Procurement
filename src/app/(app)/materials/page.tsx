@@ -1,6 +1,6 @@
 import { Plus } from "lucide-react";
 import { prisma } from "@/lib/prisma";
-import { requireUser } from "@/lib/auth-helpers";
+import { requireUser, getAccessibleProjectIds, hasAnyProjectWriteAccess } from "@/lib/auth-helpers";
 import { Button } from "@/components/ui/button";
 import { MaterialFormDialog } from "./material-form-dialog";
 import { MaterialsFilterBar } from "./filter-bar";
@@ -13,20 +13,44 @@ export default async function MaterialsPage({
 }) {
   const user = await requireUser();
   const params = await searchParams;
+  const accessibleIds = await getAccessibleProjectIds(user);
+  const canCreate = await hasAnyProjectWriteAccess(user);
 
-  const [projects, vendors, divisionCategoryMap] = await Promise.all([
-    prisma.project.findMany({ orderBy: { name: "asc" }, select: { id: true, name: true } }),
+  const [projects, vendors, divisionCategoryMap, writableMemberships] = await Promise.all([
+    prisma.project.findMany({
+      where: accessibleIds === "ALL" ? undefined : { id: { in: accessibleIds } },
+      orderBy: { name: "asc" },
+      select: { id: true, name: true },
+    }),
     prisma.vendor.findMany({ orderBy: { name: "asc" }, select: { id: true, name: true } }),
     prisma.materialItem.findMany({
       where: { csiDivisionCode: { not: null } },
       distinct: ["csiDivisionCode", "category", "subcategory"],
       select: { csiDivisionCode: true, category: true, subcategory: true },
     }),
+    user.role === "ADMIN"
+      ? Promise.resolve([])
+      : prisma.projectMembership.findMany({
+          where: { userId: user.id, role: "MEMBER" },
+          select: { projectId: true },
+        }),
   ]);
+
+  const canWrite: boolean | Set<string> =
+    user.role === "ADMIN" ? true : new Set(writableMemberships.map((m) => m.projectId));
+
+  let projectIdFilter: string | { in: string[] } | undefined;
+  if (accessibleIds === "ALL") {
+    projectIdFilter = params.project || undefined;
+  } else if (params.project) {
+    projectIdFilter = accessibleIds.includes(params.project) ? params.project : { in: [] };
+  } else {
+    projectIdFilter = { in: accessibleIds };
+  }
 
   const items = await prisma.materialItem.findMany({
     where: {
-      projectId: params.project || undefined,
+      projectId: projectIdFilter,
       vendorId: params.vendor || undefined,
       status: (params.status as "NOT_ORDERED" | "ORDERED" | "DELIVERED") || undefined,
       csiDivisionCode: params.division || undefined,
@@ -44,7 +68,7 @@ export default async function MaterialsPage({
             Procurement log across all projects.
           </p>
         </div>
-        {user.role !== "VIEWER" && (
+        {canCreate && (
           <MaterialFormDialog
             projects={projects}
             vendors={vendors}
@@ -64,7 +88,7 @@ export default async function MaterialsPage({
         items={items}
         projects={projects}
         vendors={vendors}
-        canWrite={user.role !== "VIEWER"}
+        canWrite={canWrite}
         emptyMessage="No material items match these filters."
         divisionCategoryMap={divisionCategoryMap}
       />

@@ -2,7 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
 import { prisma } from "@/lib/prisma";
-import { requireUser } from "@/lib/auth-helpers";
+import { requireUser, getProjectRole } from "@/lib/auth-helpers";
 import { Button } from "@/components/ui/button";
 import { ScheduleImportStatusBadge } from "@/components/status-badge";
 import { formatDate } from "@/lib/procurement";
@@ -22,12 +22,15 @@ export default async function ScheduleImportReviewPage({
   });
   if (!scheduleImport || scheduleImport.projectId !== id) notFound();
 
+  const role = await getProjectRole(user, id);
+  if (!role) notFound();
+
   const vendors = await prisma.vendor.findMany({
     orderBy: { name: "asc" },
     select: { id: true, name: true },
   });
 
-  const canWrite = user.role !== "VIEWER";
+  const canWrite = role === "ADMIN" || role === "MEMBER";
 
   return (
     <div className="flex flex-col gap-4">

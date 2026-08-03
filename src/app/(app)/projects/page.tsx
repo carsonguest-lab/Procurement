@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { Plus } from "lucide-react";
 import { prisma } from "@/lib/prisma";
-import { requireUser } from "@/lib/auth-helpers";
+import { requireUser, getAccessibleProjectIds } from "@/lib/auth-helpers";
 import { Button } from "@/components/ui/button";
 import {
   Table,
@@ -19,8 +19,10 @@ export const maxDuration = 60;
 
 export default async function ProjectsPage() {
   const user = await requireUser();
+  const accessibleIds = await getAccessibleProjectIds(user);
 
   const projects = await prisma.project.findMany({
+    where: accessibleIds === "ALL" ? undefined : { id: { in: accessibleIds } },
     orderBy: { createdAt: "desc" },
     include: { _count: { select: { materialItems: true } } },
   });

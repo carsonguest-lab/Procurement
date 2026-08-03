@@ -1,6 +1,6 @@
 "use client";
 
-import { useTransition } from "react";
+import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import {
@@ -12,18 +12,29 @@ import {
 } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { updateUserRole, deleteUser } from "./actions";
+import { ManageAccessDialog } from "./manage-access-dialog";
+
+type Project = { id: string; name: string };
+type Membership = { projectId: string; role: "MEMBER" | "VIEWER" };
 
 export function UserRowActions({
   userId,
+  userName,
   role,
   isSelf,
+  projects,
+  memberships,
 }: {
   userId: string;
+  userName: string;
   role: "ADMIN" | "MEMBER" | "VIEWER";
   isSelf: boolean;
+  projects: Project[];
+  memberships: Membership[];
 }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
+  const [accessOpen, setAccessOpen] = useState(false);
 
   function handleRoleChange(value: string) {
     startTransition(async () => {
@@ -54,6 +65,9 @@ export function UserRowActions({
 
   return (
     <div className="flex items-center justify-end gap-2">
+      <Button variant="outline" size="sm" onClick={() => setAccessOpen(true)}>
+        Manage Access
+      </Button>
       <Select defaultValue={role} onValueChange={handleRoleChange} disabled={pending}>
         <SelectTrigger className="h-8 w-[110px]">
           <SelectValue />
@@ -67,6 +81,14 @@ export function UserRowActions({
       <Button variant="ghost" size="sm" disabled={pending} onClick={handleDelete}>
         Remove
       </Button>
+      <ManageAccessDialog
+        open={accessOpen}
+        onOpenChange={setAccessOpen}
+        userId={userId}
+        userName={userName}
+        projects={projects}
+        memberships={memberships}
+      />
     </div>
   );
 }

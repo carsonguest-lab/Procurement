@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { handleUpload, type HandleUploadBody } from "@vercel/blob/client";
-import { requireWriter } from "@/lib/auth-helpers";
+import { requireProjectWriter } from "@/lib/auth-helpers";
 
 export async function POST(request: NextRequest) {
   const body = (await request.json()) as HandleUploadBody;
@@ -9,8 +9,11 @@ export async function POST(request: NextRequest) {
     const jsonResponse = await handleUpload({
       body,
       request,
-      onBeforeGenerateToken: async () => {
-        await requireWriter();
+      onBeforeGenerateToken: async (_pathname, clientPayload) => {
+        if (!clientPayload) {
+          throw new Error("Missing project for this upload.");
+        }
+        await requireProjectWriter(clientPayload);
         return {
           allowedContentTypes: ["application/pdf"],
           addRandomSuffix: true,

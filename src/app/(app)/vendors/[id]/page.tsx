@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
 import { Mail, Phone } from "lucide-react";
 import { prisma } from "@/lib/prisma";
-import { requireUser } from "@/lib/auth-helpers";
+import { requireUser, getAccessibleProjectIds } from "@/lib/auth-helpers";
 import { Button } from "@/components/ui/button";
 import { MaterialsTable } from "@/components/materials-table";
 import { VendorFormDialog } from "../vendor-form-dialog";
@@ -17,22 +17,36 @@ export default async function VendorDetailPage({
   const vendor = await prisma.vendor.findUnique({ where: { id } });
   if (!vendor) notFound();
 
-  const [items, projects, vendors, divisionCategoryMap] = await Promise.all([
+  const accessibleIds = await getAccessibleProjectIds(user);
+  const projectIdFilter = accessibleIds === "ALL" ? undefined : { in: accessibleIds };
+
+  const [items, projects, vendors, divisionCategoryMap, writableMemberships] = await Promise.all([
     prisma.materialItem.findMany({
-      where: { vendorId: id },
+      where: { vendorId: id, projectId: projectIdFilter },
       include: { project: true, vendor: true },
       orderBy: { requiredOnSiteDate: "asc" },
     }),
-    prisma.project.findMany({ orderBy: { name: "asc" }, select: { id: true, name: true } }),
+    prisma.project.findMany({
+      where: accessibleIds === "ALL" ? undefined : { id: { in: accessibleIds } },
+      orderBy: { name: "asc" },
+      select: { id: true, name: true },
+    }),
     prisma.vendor.findMany({ orderBy: { name: "asc" }, select: { id: true, name: true } }),
     prisma.materialItem.findMany({
       where: { csiDivisionCode: { not: null } },
       distinct: ["csiDivisionCode", "category", "subcategory"],
       select: { csiDivisionCode: true, category: true, subcategory: true },
     }),
+    user.role === "ADMIN"
+      ? Promise.resolve([])
+      : prisma.projectMembership.findMany({
+          where: { userId: user.id, role: "MEMBER" },
+          select: { projectId: true },
+        }),
   ]);
 
-  const canWrite = user.role !== "VIEWER";
+  const canWrite: boolean | Set<string> =
+    user.role === "ADMIN" ? true : new Set(writableMemberships.map((m) => m.projectId));
 
   return (
     <div className="flex flex-col gap-4">
@@ -57,7 +71,7 @@ export default async function VendorDetailPage({
             <p className="mt-2 max-w-2xl text-sm text-muted-foreground">{vendor.notes}</p>
           )}
         </div>
-        {canWrite && (
+        {user.role !== "VIEWER" && (
           <VendorFormDialog vendor={vendor} trigger={<Button variant="outline">Edit Vendor</Button>} />
         )}
       </div>

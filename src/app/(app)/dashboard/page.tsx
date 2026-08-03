@@ -1,16 +1,18 @@
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
-import { requireUser } from "@/lib/auth-helpers";
+import { requireUser, getAccessibleProjectIds } from "@/lib/auth-helpers";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { MaterialList } from "./material-list";
 import { DashboardSearch } from "./dashboard-search";
 import { isAtRisk, isBlockedOnSubmittal, isOverdueToOrder, startOfToday } from "@/lib/procurement";
 
 export default async function DashboardPage() {
-  await requireUser();
+  const user = await requireUser();
+  const accessibleIds = await getAccessibleProjectIds(user);
+  const projectIdFilter = accessibleIds === "ALL" ? undefined : { in: accessibleIds };
 
   const items = await prisma.materialItem.findMany({
-    where: { status: { not: "DELIVERED" } },
+    where: { status: { not: "DELIVERED" }, projectId: projectIdFilter },
     include: { project: true, vendor: true },
     orderBy: { requiredOnSiteDate: "asc" },
   });
@@ -35,6 +37,7 @@ export default async function DashboardPage() {
   );
 
   const projects = await prisma.project.findMany({
+    where: accessibleIds === "ALL" ? undefined : { id: { in: accessibleIds } },
     orderBy: { name: "asc" },
     include: { materialItems: { where: { status: { not: "DELIVERED" } } } },
   });

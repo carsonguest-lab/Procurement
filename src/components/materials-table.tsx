@@ -362,7 +362,8 @@ export function MaterialsTable({
   vendors: Option[];
   showProjectColumn?: boolean;
   showVendorColumn?: boolean;
-  canWrite: boolean;
+  /** true/false for uniform access, or a Set of writable project IDs when access varies by project. */
+  canWrite: boolean | Set<string>;
   emptyMessage?: string;
   highlightId?: string;
   divisionCategoryMap?: DivisionCategoryEntry[];
@@ -473,6 +474,10 @@ export function MaterialsTable({
     return true;
   });
 
+  function canWriteItem(item: MaterialRow) {
+    return typeof canWrite === "boolean" ? canWrite : canWrite.has(item.project.id);
+  }
+
   function renderCell(id: ColumnId, item: MaterialRow) {
     switch (id) {
       case "material":
@@ -514,7 +519,7 @@ export function MaterialsTable({
           </div>
         );
       case "submittal":
-        return canWrite ? (
+        return canWriteItem(item) ? (
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <button type="button" className="cursor-pointer">
@@ -537,7 +542,7 @@ export function MaterialsTable({
           <SubmittalStatusBadge status={item.submittalStatus} />
         );
       case "status":
-        return canWrite ? (
+        return canWriteItem(item) ? (
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <button type="button" className="cursor-pointer">
@@ -699,7 +704,7 @@ export function MaterialsTable({
                   </TableCell>
                 ))}
                 <TableCell>
-                  {canWrite && (
+                  {canWriteItem(item) && (
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
                         <Button variant="ghost" size="icon" className="h-8 w-8">
@@ -718,7 +723,7 @@ export function MaterialsTable({
                       </DropdownMenuContent>
                     </DropdownMenu>
                   )}
-                  {canWrite && (
+                  {canWriteItem(item) && (
                     <MaterialFormDialog
                       projects={projects}
                       vendors={vendors}

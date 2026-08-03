@@ -3,7 +3,7 @@
 import { z } from "zod";
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
-import { requireWriter } from "@/lib/auth-helpers";
+import { requireProjectWriter } from "@/lib/auth-helpers";
 import { computeOrderByDate, isSubmittalApproved } from "@/lib/procurement";
 
 const SUBMITTAL_STATUSES = [
@@ -51,8 +51,8 @@ function resolveOrderByDate(requiredOnSiteDate: Date, leadTimeDays: number, over
 }
 
 export async function createMaterialItem(formData: FormData) {
-  const user = await requireWriter();
   const parsed = parseForm(formData);
+  const user = await requireProjectWriter(parsed.projectId);
   const requiredOnSiteDate = new Date(parsed.requiredOnSiteDate);
 
   const item = await prisma.materialItem.create({
@@ -80,11 +80,18 @@ export async function createMaterialItem(formData: FormData) {
 }
 
 export async function updateMaterialItem(itemId: string, formData: FormData) {
-  await requireWriter();
   const parsed = parseForm(formData);
+  const existing = await prisma.materialItem.findUniqueOrThrow({
+    where: { id: itemId },
+    select: { projectId: true },
+  });
+  await requireProjectWriter(existing.projectId);
+  if (parsed.projectId !== existing.projectId) {
+    await requireProjectWriter(parsed.projectId);
+  }
   const requiredOnSiteDate = new Date(parsed.requiredOnSiteDate);
 
-  const item = await prisma.materialItem.update({
+  await prisma.materialItem.update({
     where: { id: itemId },
     data: {
       projectId: parsed.projectId,
@@ -104,11 +111,17 @@ export async function updateMaterialItem(itemId: string, formData: FormData) {
   revalidatePath("/materials");
   revalidatePath("/dashboard");
   revalidatePath("/calendar");
-  revalidatePath(`/projects/${item.projectId}`);
+  revalidatePath(`/projects/${existing.projectId}`);
+  if (parsed.projectId !== existing.projectId) revalidatePath(`/projects/${parsed.projectId}`);
 }
 
 export async function deleteMaterialItem(itemId: string) {
-  await requireWriter();
+  const existing = await prisma.materialItem.findUniqueOrThrow({
+    where: { id: itemId },
+    select: { projectId: true },
+  });
+  await requireProjectWriter(existing.projectId);
+
   const item = await prisma.materialItem.delete({ where: { id: itemId } });
   revalidatePath("/materials");
   revalidatePath("/dashboard");
@@ -120,13 +133,13 @@ export async function setMaterialStatus(
   itemId: string,
   status: "NOT_ORDERED" | "ORDERED" | "DELIVERED"
 ) {
-  await requireWriter();
+  const current = await prisma.materialItem.findUniqueOrThrow({
+    where: { id: itemId },
+    select: { projectId: true, submittalStatus: true },
+  });
+  await requireProjectWriter(current.projectId);
 
   if (status === "ORDERED" || status === "DELIVERED") {
-    const current = await prisma.materialItem.findUniqueOrThrow({
-      where: { id: itemId },
-      select: { submittalStatus: true },
-    });
     if (!isSubmittalApproved(current.submittalStatus)) {
       throw new Error(
         "Can't proceed with procurement until the submittal is approved for this item."
@@ -159,7 +172,11 @@ export async function setSubmittalStatus(
   itemId: string,
   submittalStatus: (typeof SUBMITTAL_STATUSES)[number]
 ) {
-  await requireWriter();
+  const existing = await prisma.materialItem.findUniqueOrThrow({
+    where: { id: itemId },
+    select: { projectId: true },
+  });
+  await requireProjectWriter(existing.projectId);
 
   const item = await prisma.materialItem.update({
     where: { id: itemId },

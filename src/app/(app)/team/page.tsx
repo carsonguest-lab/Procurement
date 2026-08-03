@@ -12,15 +12,25 @@ import {
 } from "@/components/ui/table";
 import { UserFormDialog } from "./user-form-dialog";
 import { UserRowActions } from "./user-row-actions";
+import { PendingInvites } from "./pending-invites";
 import { formatDate } from "@/lib/procurement";
 
 export default async function TeamPage() {
   const admin = await requireAdmin();
 
-  const users = await prisma.user.findMany({ orderBy: { createdAt: "asc" } });
+  const [users, invites, projects, memberships] = await Promise.all([
+    prisma.user.findMany({ orderBy: { createdAt: "asc" } }),
+    prisma.invite.findMany({
+      where: { acceptedAt: null, expiresAt: { gt: new Date() } },
+      include: { invitedBy: { select: { name: true } } },
+      orderBy: { createdAt: "desc" },
+    }),
+    prisma.project.findMany({ orderBy: { name: "asc" }, select: { id: true, name: true } }),
+    prisma.projectMembership.findMany({ select: { userId: true, projectId: true, role: true } }),
+  ]);
 
   return (
-    <div className="flex flex-col gap-4">
+    <div className="flex flex-col gap-6">
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-2xl font-semibold tracking-tight">Team</h2>
@@ -31,7 +41,7 @@ export default async function TeamPage() {
         <UserFormDialog
           trigger={
             <Button>
-              <Plus className="mr-1 h-4 w-4" /> Add Team Member
+              <Plus className="mr-1 h-4 w-4" /> Invite Team Member
             </Button>
           }
         />
@@ -58,8 +68,13 @@ export default async function TeamPage() {
                 <TableCell className="text-right">
                   <UserRowActions
                     userId={user.id}
+                    userName={user.name}
                     role={user.role}
                     isSelf={user.id === admin.id}
+                    projects={projects}
+                    memberships={memberships
+                      .filter((m) => m.userId === user.id)
+                      .map((m) => ({ projectId: m.projectId, role: m.role }))}
                   />
                 </TableCell>
               </TableRow>
@@ -67,6 +82,8 @@ export default async function TeamPage() {
           </TableBody>
         </Table>
       </div>
+
+      <PendingInvites invites={invites} />
     </div>
   );
 }

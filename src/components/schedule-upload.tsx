@@ -65,6 +65,7 @@ export function ScheduleUpload({
       const blob = await upload(file.name, file, {
         access: "private",
         handleUploadUrl: "/api/schedule-upload",
+        clientPayload: projectId,
         onUploadProgress: (p) => setProgress(p.percentage),
         abortSignal: uploadTimeout,
       });

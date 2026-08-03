@@ -3,7 +3,7 @@
 import { z } from "zod";
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
-import { requireWriter } from "@/lib/auth-helpers";
+import { requireWriter, requireProjectWriter } from "@/lib/auth-helpers";
 
 const projectSchema = z.object({
   name: z.string().min(1, "Name is required"),
@@ -43,7 +43,7 @@ export async function createProject(formData: FormData) {
 }
 
 export async function updateProject(projectId: string, formData: FormData) {
-  await requireWriter();
+  await requireProjectWriter(projectId);
 
   const parsed = projectSchema.parse({
     name: formData.get("name"),

@@ -47,27 +47,75 @@ enum ExtractedTagStatus {
   REJECTED
 }
 
+enum ProjectRole {
+  MEMBER
+  VIEWER
+}
+
 model User {
-  id                      String           @id @default(cuid())
+  id                      String               @id @default(cuid())
   name                    String
-  email                   String           @unique
+  email                   String               @unique
   passwordHash            String
-  role                    Role             @default(MEMBER)
-  createdAt               DateTime         @default(now())
-  loggedMaterial          MaterialItem[]   @relation("MaterialItemLoggedBy")
-  scheduleImportsUploaded ScheduleImport[] @relation("ScheduleImportUploadedBy")
+  role                    Role                 @default(MEMBER)
+  createdAt               DateTime             @default(now())
+  loggedMaterial          MaterialItem[]       @relation("MaterialItemLoggedBy")
+  scheduleImportsUploaded ScheduleImport[]     @relation("ScheduleImportUploadedBy")
+  projectMemberships      ProjectMembership[]
+  invitesSent             Invite[]             @relation("InviteInvitedBy")
+  passwordResetTokens     PasswordResetToken[]
 }
 
 model Project {
-  id              String           @id @default(cuid())
+  id              String              @id @default(cuid())
   name            String
   address         String?
-  status          ProjectStatus    @default(ACTIVE)
+  status          ProjectStatus       @default(ACTIVE)
   startDate       DateTime?
   endDate         DateTime?
-  createdAt       DateTime         @default(now())
+  createdAt       DateTime            @default(now())
   materialItems   MaterialItem[]
   scheduleImports ScheduleImport[]
+  memberships     ProjectMembership[]
+}
+
+model ProjectMembership {
+  id        String      @id @default(cuid())
+  user      User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId    String
+  project   Project     @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  projectId String
+  role      ProjectRole
+  createdAt DateTime    @default(now())
+
+  @@unique([userId, projectId])
+  @@index([projectId])
+}
+
+model Invite {
+  id          String    @id @default(cuid())
+  email       String
+  role        Role
+  tokenHash   String    @unique
+  invitedBy   User?     @relation("InviteInvitedBy", fields: [invitedById], references: [id], onDelete: SetNull)
+  invitedById String?
+  expiresAt   DateTime
+  acceptedAt  DateTime?
+  createdAt   DateTime  @default(now())
+
+  @@index([email])
+}
+
+model PasswordResetToken {
+  id        String    @id @default(cuid())
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId    String
+  tokenHash String    @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([userId])
 }
 
 model Vendor {

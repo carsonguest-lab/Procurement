@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/prisma";
-import { requireUser } from "@/lib/auth-helpers";
+import { requireUser, getAccessibleProjectIds, hasAnyProjectWriteAccess } from "@/lib/auth-helpers";
 import { MaterialsFilterBar } from "@/app/(app)/materials/filter-bar";
 import { ProcurementCalendar } from "@/components/procurement-calendar";
 
@@ -10,15 +10,30 @@ export default async function CalendarPage({
 }) {
   const user = await requireUser();
   const params = await searchParams;
+  const accessibleIds = await getAccessibleProjectIds(user);
+  const canWrite = await hasAnyProjectWriteAccess(user);
 
   const [projects, vendors] = await Promise.all([
-    prisma.project.findMany({ orderBy: { name: "asc" }, select: { id: true, name: true } }),
+    prisma.project.findMany({
+      where: accessibleIds === "ALL" ? undefined : { id: { in: accessibleIds } },
+      orderBy: { name: "asc" },
+      select: { id: true, name: true },
+    }),
     prisma.vendor.findMany({ orderBy: { name: "asc" }, select: { id: true, name: true } }),
   ]);
 
+  let projectIdFilter: string | { in: string[] } | undefined;
+  if (accessibleIds === "ALL") {
+    projectIdFilter = params.project || undefined;
+  } else if (params.project) {
+    projectIdFilter = accessibleIds.includes(params.project) ? params.project : { in: [] };
+  } else {
+    projectIdFilter = { in: accessibleIds };
+  }
+
   const items = await prisma.materialItem.findMany({
     where: {
-      projectId: params.project || undefined,
+      projectId: projectIdFilter,
       vendorId: params.vendor || undefined,
       status: (params.status as "NOT_ORDERED" | "ORDERED" | "DELIVERED") || undefined,
     },
@@ -41,7 +56,7 @@ export default async function CalendarPage({
         items={items}
         projects={projects}
         vendors={vendors}
-        canWrite={user.role !== "VIEWER"}
+        canWrite={canWrite}
       />
     </div>
   );

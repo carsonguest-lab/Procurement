@@ -2,7 +2,7 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import { Plus } from "lucide-react";
 import { prisma } from "@/lib/prisma";
-import { requireUser } from "@/lib/auth-helpers";
+import { requireUser, getProjectRole } from "@/lib/auth-helpers";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -31,6 +31,9 @@ export default async function ProjectDetailPage({
   const project = await prisma.project.findUnique({ where: { id } });
   if (!project) notFound();
 
+  const role = await getProjectRole(user, id);
+  if (!role) notFound();
+
   const [items, projects, vendors, scheduleImports, divisionCategoryMap] = await Promise.all([
     prisma.materialItem.findMany({
       where: { projectId: id },
@@ -51,7 +54,7 @@ export default async function ProjectDetailPage({
     }),
   ]);
 
-  const canWrite = user.role !== "VIEWER";
+  const canWrite = role === "ADMIN" || role === "MEMBER";
   const overdueCount = items.filter((i) => isOverdueToOrder(i)).length;
   const atRiskCount = items.filter((i) => isAtRisk(i)).length;
   const blockedCount = items.filter((i) => isBlockedOnSubmittal(i)).length;

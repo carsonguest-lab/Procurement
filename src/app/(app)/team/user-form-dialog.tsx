@@ -22,7 +22,7 @@ import {
   DialogFooter,
   DialogDescription,
 } from "@/components/ui/dialog";
-import { createUser } from "./actions";
+import { createInvite } from "./actions";
 
 export function UserFormDialog({ trigger }: { trigger: React.ReactNode }) {
   const [open, setOpen] = useState(false);
@@ -34,12 +34,12 @@ export function UserFormDialog({ trigger }: { trigger: React.ReactNode }) {
     setError(null);
     startTransition(async () => {
       try {
-        await createUser(formData);
-        toast.success("Team member added");
+        await createInvite(formData);
+        toast.success("Invite sent");
         setOpen(false);
         router.refresh();
-      } catch {
-        setError("Couldn't create that account. Check the email isn't already in use.");
+      } catch (e) {
+        setError(e instanceof Error ? e.message : "Couldn't send that invite.");
       }
     });
   }
@@ -49,24 +49,15 @@ export function UserFormDialog({ trigger }: { trigger: React.ReactNode }) {
       <DialogTrigger asChild>{trigger}</DialogTrigger>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Add Team Member</DialogTitle>
+          <DialogTitle>Invite Team Member</DialogTitle>
           <DialogDescription>
-            Create an account and share the password with them directly — there&apos;s no email
-            invite yet.
+            We&apos;ll email them a link to set up their own account and password.
           </DialogDescription>
         </DialogHeader>
         <form action={handleSubmit} className="flex flex-col gap-4">
           <div className="flex flex-col gap-2">
-            <Label htmlFor="name">Name</Label>
-            <Input id="name" name="name" required />
-          </div>
-          <div className="flex flex-col gap-2">
             <Label htmlFor="email">Email</Label>
             <Input id="email" name="email" type="email" required />
-          </div>
-          <div className="flex flex-col gap-2">
-            <Label htmlFor="password">Temporary Password</Label>
-            <Input id="password" name="password" type="password" minLength={8} required />
           </div>
           <div className="flex flex-col gap-2">
             <Label htmlFor="role">Role</Label>
@@ -84,7 +75,7 @@ export function UserFormDialog({ trigger }: { trigger: React.ReactNode }) {
           {error && <p className="text-sm text-destructive">{error}</p>}
           <DialogFooter>
             <Button type="submit" disabled={pending}>
-              {pending ? "Creating..." : "Add Team Member"}
+              {pending ? "Sending..." : "Send Invite"}
             </Button>
           </DialogFooter>
         </form>

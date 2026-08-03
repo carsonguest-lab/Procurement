@@ -1,7 +1,7 @@
 "use server";
 
 import { prisma } from "@/lib/prisma";
-import { requireUser } from "@/lib/auth-helpers";
+import { requireUser, getAccessibleProjectIds } from "@/lib/auth-helpers";
 import { formatDate } from "@/lib/procurement";
 import { matchesParsedDate, parseDateQuery } from "@/lib/date-search";
 
@@ -20,19 +20,24 @@ export type SearchResult =
 const RESULTS_PER_GROUP = 5;
 
 export async function searchAll(rawQuery: string): Promise<SearchResult[]> {
-  await requireUser();
+  const user = await requireUser();
+  const accessibleIds = await getAccessibleProjectIds(user);
+  const projectIdFilter = accessibleIds === "ALL" ? undefined : { in: accessibleIds };
 
   const query = rawQuery.trim();
   if (!query) return [];
 
   const [projects, materials] = await Promise.all([
     prisma.project.findMany({
-      where: { name: { contains: query, mode: "insensitive" } },
+      where: {
+        name: { contains: query, mode: "insensitive" },
+        id: accessibleIds === "ALL" ? undefined : { in: accessibleIds },
+      },
       orderBy: { name: "asc" },
       take: RESULTS_PER_GROUP,
     }),
     prisma.materialItem.findMany({
-      where: { material: { contains: query, mode: "insensitive" } },
+      where: { material: { contains: query, mode: "insensitive" }, projectId: projectIdFilter },
       include: { project: true, vendor: true },
       orderBy: { requiredOnSiteDate: "asc" },
       take: RESULTS_PER_GROUP,
@@ -61,7 +66,10 @@ export async function searchAll(rawQuery: string): Promise<SearchResult[]> {
 
   const parsedDate = parseDateQuery(query);
   if (parsedDate) {
-    const allItems = await prisma.materialItem.findMany({ include: { project: true } });
+    const allItems = await prisma.materialItem.findMany({
+      where: { projectId: projectIdFilter },
+      include: { project: true },
+    });
     const dateMatches: SearchResult[] = [];
 
     for (const item of allItems) {

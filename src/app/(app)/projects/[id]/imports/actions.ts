@@ -4,7 +4,7 @@ import { z } from "zod";
 import { revalidatePath } from "next/cache";
 import { get } from "@vercel/blob";
 import { prisma } from "@/lib/prisma";
-import { requireWriter } from "@/lib/auth-helpers";
+import { requireProjectWriter } from "@/lib/auth-helpers";
 import { computeOrderByDate } from "@/lib/procurement";
 import { extractEquipmentTags } from "@/lib/schedule-extraction";
 
@@ -22,7 +22,7 @@ export async function createScheduleImport({
   fileName: string;
   fileUrl: string;
 }) {
-  const user = await requireWriter();
+  const user = await requireProjectWriter(projectId);
 
   const scheduleImport = await prisma.scheduleImport.create({
     data: {
@@ -92,13 +92,13 @@ export async function approveExtractedTag(
     orderByDate?: string;
   }
 ) {
-  const user = await requireWriter();
   const parsed = approveSchema.parse(input);
 
   const extractedTag = await prisma.extractedTag.findUniqueOrThrow({
     where: { id: tagId },
     include: { import: true },
   });
+  const user = await requireProjectWriter(extractedTag.import.projectId);
 
   const requiredOnSiteDate = new Date(parsed.requiredOnSiteDate);
   const orderByDate = parsed.orderByDate
@@ -130,7 +130,11 @@ export async function approveExtractedTag(
 }
 
 export async function rejectExtractedTag(tagId: string) {
-  await requireWriter();
+  const existing = await prisma.extractedTag.findUniqueOrThrow({
+    where: { id: tagId },
+    include: { import: true },
+  });
+  await requireProjectWriter(existing.import.projectId);
 
   const extractedTag = await prisma.extractedTag.update({
     where: { id: tagId },

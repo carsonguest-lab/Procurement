@@ -84,6 +84,19 @@ export const EXTRACTED_TAG_STATUS_LABELS: Record<ExtractedTagStatus, string> = {
   REJECTED: "Rejected",
 };
 
+export const ROLE_LABELS: Record<"ADMIN" | "MEMBER" | "VIEWER", string> = {
+  ADMIN: "Admin",
+  MEMBER: "Member",
+  VIEWER: "Viewer",
+};
+
+export type ProjectRole = "MEMBER" | "VIEWER";
+
+export const PROJECT_ROLE_LABELS: Record<ProjectRole, string> = {
+  MEMBER: "Member",
+  VIEWER: "Viewer",
+};
+
 export function formatDate(date: Date | string | null | undefined): string {
   if (!date) return "—";
   const d = typeof date === "string" ? new Date(date) : date;
