@@ -1,6 +1,7 @@
 import { Plus } from "lucide-react";
 import { prisma } from "@/lib/prisma";
 import { requireUser, getAccessibleProjectIds, hasAnyProjectWriteAccess } from "@/lib/auth-helpers";
+import { parseListParam } from "@/lib/procurement";
 import { Button } from "@/components/ui/button";
 import { MaterialFormDialog } from "./material-form-dialog";
 import { MaterialsFilterBar } from "./filter-bar";
@@ -39,21 +40,31 @@ export default async function MaterialsPage({
   const canWrite: boolean | Set<string> =
     user.role === "ADMIN" ? true : new Set(writableMemberships.map((m) => m.projectId));
 
-  let projectIdFilter: string | { in: string[] } | undefined;
+  const selectedProjectIds = parseListParam(params.project);
+  const selectedVendorIds = parseListParam(params.vendor);
+  const selectedStatuses = parseListParam(params.status);
+  const selectedDivisions = parseListParam(params.division);
+
+  let projectIdFilter: { in: string[] } | undefined;
   if (accessibleIds === "ALL") {
-    projectIdFilter = params.project || undefined;
-  } else if (params.project) {
-    projectIdFilter = accessibleIds.includes(params.project) ? params.project : { in: [] };
+    projectIdFilter = selectedProjectIds.length > 0 ? { in: selectedProjectIds } : undefined;
   } else {
-    projectIdFilter = { in: accessibleIds };
+    const ids =
+      selectedProjectIds.length > 0
+        ? selectedProjectIds.filter((id) => accessibleIds.includes(id))
+        : accessibleIds;
+    projectIdFilter = { in: ids };
   }
 
   const items = await prisma.materialItem.findMany({
     where: {
       projectId: projectIdFilter,
-      vendorId: params.vendor || undefined,
-      status: (params.status as "NOT_ORDERED" | "ORDERED" | "DELIVERED") || undefined,
-      csiDivisionCode: params.division || undefined,
+      vendorId: selectedVendorIds.length > 0 ? { in: selectedVendorIds } : undefined,
+      status:
+        selectedStatuses.length > 0
+          ? { in: selectedStatuses as ("NOT_ORDERED" | "ORDERED" | "DELIVERED")[] }
+          : undefined,
+      csiDivisionCode: selectedDivisions.length > 0 ? { in: selectedDivisions } : undefined,
     },
     include: { project: true, vendor: true },
     orderBy: { requiredOnSiteDate: "asc" },

@@ -1,5 +1,10 @@
 const ORDER_BUFFER_DAYS = 7;
 
+/** Parses a comma-separated filter-bar query param (e.g. "?division=1,6,7") into a list. */
+export function parseListParam(value: string | undefined): string[] {
+  return value ? value.split(",").filter(Boolean) : [];
+}
+
 export function computeOrderByDate(requiredOnSiteDate: Date, leadTimeDays: number): Date {
   const d = new Date(requiredOnSiteDate);
   d.setDate(d.getDate() - leadTimeDays - ORDER_BUFFER_DAYS);
